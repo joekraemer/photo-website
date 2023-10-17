@@ -1,0 +1,29 @@
+.hero__section__container {
+    display: flex;
+    flex-flow: row;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 600px;
+    margin: 10px;
+}
+
+.hero__section__figure {
+    height: 100%;
+    flex: 4;
+}
+
+.hero__section__img {
+    height: 100%;
+    width: 100%;
+    object-fit: contain;
+}
+
+.hero__section__text {
+    flex: 4;
+    vertical-align: middle;
+}
+
+.bold-name {
+    font-weight: bold;
+}

@@ -1,0 +1,43 @@
+/* Photo Card */
+.photo__card {
+    width: 170px;
+    margin: 20px;
+}
+
+.photo__card__link {
+    display: flex;
+    flex-flow: column;
+    justify-content: center;
+    width: 100%;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.photo__card__pic-wrap {
+    width: 170px;
+    height: 214px;
+    margin: 0px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.photo__card__img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* South Korea */
+.photo__card__title {
+    height: 22px;
+    text-align: center;
+
+    font-family: 'Montserrat';
+    font-style: normal;
+    font-weight: 600;
+    font-size: 18px;
+    line-height: 22px;
+
+    color: #000000;
+}

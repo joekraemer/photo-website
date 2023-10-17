@@ -1,0 +1,10 @@
+.photo-card-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    align-content: flex-start;
+    padding: 0px;
+    gap: 20px;
+}
