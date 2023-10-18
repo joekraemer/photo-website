@@ -1,15 +1,13 @@
 import React from 'react'
 import './PhotoContainer.css'
+import Photo from './Photo'
 
-function PhotoContainer(props) {
+function PhotoContainer({ photoSources }) {
     return (
         <div className="photo-container">
-            <figure className='photo-container__figure'>
-                <img src="/photos/recentfavorites/DSC05344.jpg" alt="" className="photo-container__img" />
-            </figure>
-            <figure className='photo-container__figure'>
-                <img src="/photos/recentfavorites/DSC05649.jpg" alt="" className="photo-container__img" />
-            </figure>
+            {photoSources.map((src, index) => (
+                <Photo key={index} src={src} />
+            ))}
         </div>
     )
 }

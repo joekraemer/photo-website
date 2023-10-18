@@ -10,7 +10,15 @@ function Home() {
         <>
             <HeroSection />
             <TextHeaderWithLine title='Recent Favorites' />
-            <PhotoContainer />
+            <PhotoContainer photoSources={[
+                "/photos/recentfavorites/DSC00266.jpg",
+                "/photos/recentfavorites/DSC09335.jpg",
+                "/photos/recentfavorites/DSC07277.jpg"]} />
+            <PhotoContainer photoSources={[
+                "/photos/recentfavorites/DSC05344.jpg",
+                "/photos/recentfavorites/DSC05649.jpg"]} />
+
+
         </>
     )
 }

@@ -1,13 +1,27 @@
 .photo-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
     display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0px;
+    gap: 12px;
 }
 
-.photo-container__figure {
-    flex: 1;
+.photo__figure {
+    width: fit-content;
+    height: fit-content;
     margin: 0;
 }
 
-.photo-container__img {
-    max-width: 100%;
-    height: 360;
+.photo__img--horizontal {
+    width: 540px;
+    height: 360px;
+}
+
+.photo__img--vertical {
+    width: 350px;
+    height: 437px;
 }
