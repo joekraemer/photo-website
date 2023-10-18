@@ -11,7 +11,7 @@ function PhotosPage() {
                 <PhotoCard
                     src="/photos/portfolio/South Korea/DSC09123.jpg"
                     title="South Korea"
-                    path='/services'
+                    path='/southkorea'
                 />
                 <PhotoCard
                     src="/photos/portfolio/South Africa/DSC02715.jpg"

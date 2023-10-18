@@ -6,6 +6,7 @@ import './index.css';
 import Home from './components/pages/Home'
 import PhotosPage from './components/pages/PhotosPage'
 import Contact from './components/pages/Contact';
+import SouthKorea from './components/pages/SouthKorea';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
             <Route path='/' element={<Home />} />
             <Route path='/photos' element={<PhotosPage />} />
             <Route path='/contact' element={<Contact />} />
+            <Route path='/southkorea' element={<SouthKorea />} />
           </Routes>
         </Router>
       </div>

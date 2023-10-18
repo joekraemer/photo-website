@@ -28,6 +28,7 @@
     font-size: 2rem;
     display: flex;
     align-items: center;
+    width: 235px;
 }
 
 .fa-typo3 {
@@ -118,7 +119,6 @@
         position: absolute;
         top: 0;
         left: 0;
-        transform: translate(25%, 50%);
     }
 
     .menu-icon {
