@@ -9,3 +9,42 @@
     padding: 0px;
     gap: 12px;
 }
+
+.photo__figure {
+    width: fit-content;
+    height: fit-content;
+    margin: 0;
+}
+
+.photo__img--horizontal {
+    width: 540px;
+    height: 360px;
+}
+
+.photo__img--vertical {
+    width: 350px;
+    height: 437px;
+}
+
+/* Media query for smaller screens */
+@media (max-width: 768px) {
+
+    .photo-row,
+    .photo-container {
+        justify-content: center;
+        /* Center align photos */
+    }
+
+    .photo__figure {
+        width: 100%;
+        /* Photos take full width of the container */
+    }
+
+    .photo__img--horizontal,
+    .photo__img--vertical {
+        width: 100%;
+        /* Photos take full width */
+        height: auto;
+        /* Maintain aspect ratio */
+    }
+}

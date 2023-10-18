@@ -8,7 +8,6 @@ function PhotoGrid({ photoSources }) {
     const horizontalRows = [];
     let currentVerticalRow = [];
     let currentHorizontalRow = [];
-    let isVertical = true;
 
     // Iterate through the photoSources and organize them into rows
     photoSources.forEach((src, index) => {
@@ -17,24 +16,22 @@ function PhotoGrid({ photoSources }) {
         const aspectRatio = img.width / img.height;
         const aspectClass = aspectRatio >= 1 ? 'horizontal' : 'vertical';
 
-        if (isVertical) {
+        if (aspectClass === 'vertical') {
             currentVerticalRow.push(<Photo key={index} src={src} />);
         } else {
             currentHorizontalRow.push(<Photo key={index} src={src} />);
         }
 
         // Check if it's time to start a new row
-        if (isVertical) {
+        if (aspectClass === 'vertical') {
             if (currentVerticalRow.length === 3 || (currentVerticalRow.length === 2 && index === photoSources.length - 1)) {
                 verticalRows.push(currentVerticalRow);
                 currentVerticalRow = [];
-                isVertical = false;
             }
         } else {
             if (currentHorizontalRow.length === 2 || (currentHorizontalRow.length === 1 && index === photoSources.length - 1)) {
                 horizontalRows.push(currentHorizontalRow);
                 currentHorizontalRow = [];
-                isVertical = true;
             }
         }
     });
