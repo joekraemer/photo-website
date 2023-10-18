@@ -4,7 +4,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import './App.css';
 import './index.css';
 import Home from './components/pages/Home'
-import Photos from './components/pages/Photos'
+import PhotosPage from './components/pages/PhotosPage'
+import Contact from './components/pages/Contact';
 
 function App() {
   return (
@@ -14,7 +15,8 @@ function App() {
           <Navbar />
           <Routes>
             <Route path='/' element={<Home />} />
-            <Route path='/photos' element={<Photos />} />
+            <Route path='/photos' element={<PhotosPage />} />
+            <Route path='/contact' element={<Contact />} />
           </Routes>
         </Router>
       </div>

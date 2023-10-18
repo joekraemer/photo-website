@@ -1,9 +1,9 @@
 import React from 'react'
 import '../../App.css'
-import './Photos.css'
+import './PhotosPage.css'
 import PhotoCard from '../PhotoCard'
 
-function Photos() {
+function PhotosPage() {
     return (
         <>
             <h1>Photos</h1>
@@ -28,4 +28,4 @@ function Photos() {
     )
 }
 
-export default Photos
+export default PhotosPage
