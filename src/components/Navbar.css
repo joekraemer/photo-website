@@ -1,34 +1,33 @@
 .navbar {
     background: #fff;
-    height: 60px;
     display: flex;
     justify-content: center;
-    align-items: center;
     font-size: 1.2rem;
     position: sticky;
     top: 0;
     z-index: 999;
     margin-bottom: 60px;
+    height: 100px;
 }
 
 .navbar-container {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
+    height: 70px;
     align-items: center;
-    height: 60px;
-    max-width: 1500px;
+    width: 100%;
 }
 
 .navbar-logo {
     color: #000;
-    justify-self: start;
+    justify-content: flex-start;
     margin-left: 20px;
     cursor: pointer;
     text-decoration: none;
     font-size: 2rem;
-    display: flex;
     align-items: center;
-    width: 235px;
+    flex-shrink: 0;
+    width: 250px;
 }
 
 .fa-typo3 {
@@ -36,10 +35,10 @@
     font-size: 1.8rem;
 }
 
-.nav-menu {
+.nav-menu-desktop {
     display: grid;
     grid-template-columns: repeat(5, auto);
-    grid-gap: 10px;
+    gap: 10px;
     list-style: none;
     text-align: center;
     width: 60vw;
@@ -47,8 +46,13 @@
     margin-right: 2rem;
 }
 
+.nav-menu-mobile {
+    display: none;
+}
+
 .nav-item {
-    height: 60px;
+    display: flex;
+    align-items: center;
 }
 
 .nav-links {
@@ -77,12 +81,17 @@
     display: none;
 }
 
-@media screen and (max-width: 960px) {
-    .NavbarItems {
-        position: relative;
+@media screen and (max-width: 730px) {
+
+    .nav-menu-desktop {
+        display: none;
     }
 
-    .nav-menu {
+    .navbar-logo {
+        justify-content: flex-start;
+    }
+
+    .nav-menu-mobile {
         display: flex;
         flex-direction: column;
         width: 100%;
@@ -90,11 +99,12 @@
         position: absolute;
         top: 60px;
         left: -100%;
-        opacity: 1;
+        opacity: 0;
         transition: all 0.5s ease;
+        padding: 0.5em;
     }
 
-    .nav-menu.active {
+    .nav-menu-mobile.active {
         background: #fff;
         left: 0;
         opacity: 1;
@@ -102,38 +112,22 @@
         z-index: 1;
     }
 
-    .nav-links {
-        text-align: center;
-        padding: 2rem;
-        width: 100%;
-        display: table;
-    }
-
-    .nav-links:hover {
-        background-color: #000;
-        color: #fff;
-        border-radius: 0;
-    }
-
-    .navbar-logo {
-        position: absolute;
-        top: 0;
-        left: 0;
-    }
-
     .menu-icon {
-        display: block;
-        position: absolute;
-        top: 0;
-        right: 0;
-        transform: translate(-100%, 60%);
+        display: flex;
+        justify-content: end;
         font-size: 1.8rem;
         cursor: pointer;
+        padding: 1em;
     }
 
     .fa-times {
         color: #000;
         font-size: 2rem;
+    }
+
+    .nav-item-mobile {
+        display: flex;
+        align-items: center;
     }
 
     .nav-links-mobile {
@@ -156,4 +150,5 @@
         color: #fff;
         transition: 250ms;
     }
+
 }

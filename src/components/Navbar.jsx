@@ -35,7 +35,9 @@ function Navbar() {
                     <div className='menu-icon' onClick={handleClick}>
                         <i className={click ? 'fas fa-times' : 'fas fa-bars'} />
                     </div>
-                    <ul className={click ? 'nav-menu active' : 'nav-menu'}>
+
+                    {/* Desktop Menu */}
+                    <ol className='nav-menu-desktop'>
                         <li className='nav-item'>
                             <Link to='/photos' className='nav-links' onClick={closeMobileMenu}>
                                 Photos
@@ -51,7 +53,26 @@ function Navbar() {
                                 Contact
                             </Link>
                         </li>
-                    </ul>
+                    </ol>
+
+                    {/* TODO: This could be a different module */}
+                    <ol className={click ? 'nav-menu-mobile active' : 'nav-menu-mobile'}>
+                        <li className='nav-item-mobile'>
+                            <Link to='/photos' className='nav-links-mobile' onClick={closeMobileMenu}>
+                                Photos
+                            </Link>
+                        </li>
+                        <li className='nav-item-mobile'>
+                            <Link to='/videos' className='nav-links-mobile' onClick={closeMobileMenu}>
+                                Videos
+                            </Link>
+                        </li>
+                        <li className='nav-item-mobile'>
+                            <Link to='/contact' className='nav-links-mobile' onClick={closeMobileMenu}>
+                                Contact
+                            </Link>
+                        </li>
+                    </ol>
                 </div>
             </nav>
         </>
