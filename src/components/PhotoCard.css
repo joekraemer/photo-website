@@ -9,17 +9,24 @@
     flex-flow: column;
     justify-content: center;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
     text-decoration: none;
 }
 
-.photo__card__pic-wrap {
+.photo__card__photostack {
+    position: relative;
+    height: 214px;
+}
+
+.photo__card__figure {
     width: 170px;
     height: 214px;
     margin: 0px;
     border-radius: 5px;
     overflow: hidden;
+    position: absolute;
 }
+
 
 .photo__card__img {
     display: block;
@@ -28,7 +35,6 @@
     object-fit: cover;
 }
 
-/* South Korea */
 .photo__card__title {
     height: 22px;
     text-align: center;
