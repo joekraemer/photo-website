@@ -5,23 +5,31 @@ function Photo({ src }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const openModal = () => {
+        console.log('open modal');
         setIsModalOpen(true);
     };
 
-    const closeModal = () => {
-        setIsModalOpen(false);
+    const closeModal = (event) => {
+        console.log('close modal attempt');
+        if (event && event.target === event.currentTarget) {
+            setIsModalOpen(false);
+            console.log('close modal set');
+        }
     };
 
-    // Define different CSS classes based on aspect ratio
+
     const aspectClass = calculateAspectClass(src);
 
     return (
-        <figure className={`photo__figure`} onClick={openModal}>
-            <img className={`photo__img--${aspectClass}`} src={src} alt="Photo" loading="lazy" />
+        <>
+            <figure className={`photo__figure`} onClick={(event) => openModal(event)}>
+                <img className={`photo__img--${aspectClass}`} src={src} alt="Photo" loading="lazy" />
+            </figure>
             {isModalOpen && <Modal src={src} onClose={closeModal} />}
-        </figure>
+        </>
     );
 }
+
 
 function calculateAspectClass(src) {
     // Calculate the aspect ratio of the photo
