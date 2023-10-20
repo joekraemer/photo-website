@@ -9,9 +9,9 @@ function PhotosPage() {
             <h1>Photos</h1>
             <div className="photo-card-container">
                 <PhotoCard
-                    photopaths={["/photos/portfolio/SouthKorea/DSC09123.jpg",
-                        "/photos/portfolio/SouthKorea/DSC00021.jpg",
-                        "/photos/portfolio/SouthKorea/DSC00085.jpg",]}
+                    photopaths={["/photos/portfolio/South Korea/DSC09123.jpg",
+                        "/photos/portfolio/South Korea/DSC00021.jpg",
+                        "/photos/portfolio/South Korea/DSC00085.jpg",]}
                     title="South Korea"
                     path='/southkorea'
                 />

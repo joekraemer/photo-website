@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from './Modal'; // Import the Modal component
+import { retrieveImageFromS3 } from '../services/AWSService.js'; // Import the AWS service
 
 function Photo({ src }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [imageData, setImageData] = useState(null);
 
     const openModal = () => {
         console.log('open modal');
@@ -17,6 +19,16 @@ function Photo({ src }) {
         }
     };
 
+    useEffect(() => {
+        // Load the image from S3 when the component mounts
+        retrieveImageFromS3(src)
+            .then((imageContent) => {
+                setImageData(imageContent);
+            })
+            .catch((error) => {
+                console.error('Error loading image from S3:', error);
+            });
+    }, [src]);
 
     const aspectClass = calculateAspectClass(src);
 
@@ -24,6 +36,7 @@ function Photo({ src }) {
         <>
             <figure className={`photo__figure`} onClick={(event) => openModal(event)}>
                 <img className={`photo__img--${aspectClass}`} src={src} alt="Photo" loading="lazy" />
+                {imageData && <img className={`photo__img--${aspectClass}`} src={URL.createObjectURL(imageData)} alt="Photo" loading="lazy" />}
             </figure>
             {isModalOpen && <Modal src={src} onClose={closeModal} />}
         </>
