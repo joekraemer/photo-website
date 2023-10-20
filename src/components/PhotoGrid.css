@@ -3,27 +3,26 @@
     margin-bottom: 20px;
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
     justify-content: space-between;
-    align-items: flex-start;
     padding: 0px;
-    gap: 12px;
+    gap: 1.5em;
 }
 
 .photo__figure {
-    width: fit-content;
-    height: fit-content;
+    flex: 4;
     margin: 0;
 }
 
 .photo__img--horizontal {
-    width: 540px;
-    height: 360px;
+    height: 100%;
+    width: 100%;
+    object-fit: contain;
 }
 
 .photo__img--vertical {
-    width: 350px;
-    height: 437px;
+    height: 100%;
+    width: 100%;
+    object-fit: contain;
 }
 
 /* Media query for smaller screens */
@@ -31,6 +30,7 @@
 
     .photo-row,
     .photo-container {
+        flex-direction: column;
         justify-content: center;
         /* Center align photos */
     }
