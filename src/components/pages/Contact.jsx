@@ -2,7 +2,6 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import '../../App.css'
 import './Contact.css'
-import Photo from '../Photo'
 
 function Contact() {
     return (

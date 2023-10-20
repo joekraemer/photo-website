@@ -33,7 +33,7 @@ function Photo({ src }) {
     return (
         <>
             <figure className={`photo__figure`} onClick={(event) => openModal(event)}>
-                <img className={`photo__img--${aspectClass}`} src={src} alt="Photo" loading="lazy" />
+                <img className={`photo__img--${aspectClass}`} src={src} alt={`thumbnail-${src}`} loading="lazy" />
             </figure>
             {isModalOpen && <Modal src={src} onClose={closeModal} exifData={exifData} />}
         </>

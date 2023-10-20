@@ -4,7 +4,7 @@
     margin: 0;
 }
 
-.photo__card__link {
+.photo__card a {
     display: flex;
     flex-flow: column;
     justify-content: center;
@@ -22,7 +22,7 @@
     height: 100%;
 }
 
-.photo__card__figure {
+.photo__card figure {
     grid-area: 1/-1;
     width: 100%;
     height: fit-content;
@@ -31,7 +31,7 @@
     overflow: hidden;
 }
 
-.photo__card__img {
+.photo__card img {
     display: block;
     object-fit: cover;
     height: 100%;

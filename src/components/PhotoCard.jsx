@@ -38,13 +38,13 @@ function PhotoCard(props) {
 
         return (
             <figure
-                className={`photo__card__figure ${isHovered ? 'hovered' : ''}`}
+                className={`photo__card ${isHovered ? 'hovered' : ''}`}
                 key={index}
-                id={`photo__card__figure-${index}`}
+                id={`photo__card-${index}`}
                 style={transformStyle}
                 onTransitionEnd={() => handleTransitionEnd()} // Handle the transition end event
             >
-                <img src={src} className={`photo__card__img`} />
+                <img src={src} alt='cover and sub cards' />
             </figure>
         );
     });
@@ -56,7 +56,7 @@ function PhotoCard(props) {
                 onMouseEnter={() => { setIsHovered(true); setZIndexShift(true); }}
                 onMouseLeave={() => setIsHovered(false)}
             >
-                <Link className='photo__card__link' to={props.paths}>
+                <Link to={props.path}>
                     <div className='photo__card__photostack'>
                         {srcFanElements}
                     </div>
