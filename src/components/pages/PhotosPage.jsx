@@ -9,17 +9,19 @@ function PhotosPage() {
             <h1>Photos</h1>
             <div className="photo-card-container">
                 <PhotoCard
-                    src="/photos/portfolio/South Korea/DSC09123.jpg"
+                    photopaths={["/photos/portfolio/SouthKorea/DSC09123.jpg",
+                        "/photos/portfolio/SouthKorea/DSC00021.jpg",
+                        "/photos/portfolio/SouthKorea/DSC00085.jpg",]}
                     title="South Korea"
                     path='/southkorea'
                 />
                 <PhotoCard
-                    src="/photos/portfolio/South Africa/DSC02715.jpg"
+                    photopaths={["/photos/portfolio/South Africa/DSC02715.jpg"]}
                     title="South Africa"
                     path='/services'
                 />
                 <PhotoCard
-                    src="/photos/portfolio/Tanzania/DSC05649.jpg"
+                    photopaths={["/photos/portfolio/Tanzania/DSC05649.jpg"]}
                     title="Tanzania"
                     path='/services'
                 />
