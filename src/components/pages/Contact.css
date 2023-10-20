@@ -19,13 +19,30 @@
     justify-content: center;
     align-items: center;
     width: 100%;
-    margin-top: 200px;
+    margin-top: 20vh;
 }
 
 .list {
+    margin: 0em;
+    padding: 0em;
     flex: 4;
 }
 
 .text {
     flex: 4;
+}
+
+/* Media query for small screens */
+@media (max-width: 730px) {
+    .contact__container {
+        flex-flow: column;
+        align-items: center;
+        gap: 2em;
+        margin-top: 10vh;
+    }
+
+    .list,
+    .text {
+        flex: 1;
+    }
 }
