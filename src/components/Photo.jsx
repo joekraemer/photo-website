@@ -1,10 +1,20 @@
 import React, { useState } from 'react';
 import Modal from './Modal'; // Import the Modal component
+import exifr from 'exifr';
 
 function Photo({ src }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [exifData, setExifData] = useState(null);
 
-    const openModal = () => {
+
+    const openModal = async () => {
+        try {
+            const data = await exifr.parse(src);
+            setExifData(data);
+        } catch (error) {
+            console.error('Error reading EXIF data:', error);
+        }
+
         console.log('open modal');
         setIsModalOpen(true);
     };
@@ -25,7 +35,7 @@ function Photo({ src }) {
             <figure className={`photo__figure`} onClick={(event) => openModal(event)}>
                 <img className={`photo__img--${aspectClass}`} src={src} alt="Photo" loading="lazy" />
             </figure>
-            {isModalOpen && <Modal src={src} onClose={closeModal} />}
+            {isModalOpen && <Modal src={src} onClose={closeModal} exifData={exifData} />}
         </>
     );
 }
