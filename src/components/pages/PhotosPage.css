@@ -1,10 +1,23 @@
 .photo-card-container {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: flex-start;
-    align-content: flex-start;
-    padding: 0px;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-gap: 3em 4.5em;
+    margin: 0;
+    width: 100%;
+}
+
+/* Media query for 2 columns on medium-sized screens */
+@media (max-width: 960px) {
+    .photo-card-container {
+        grid-template-columns: repeat(2, 1fr);
+        width: 100%;
+    }
+}
+
+/* Media query for 1 column on smaller screens */
+@media (max-width: 730px) {
+    .photo-card-container {
+        grid-template-columns: repeat(1, 1fr);
+        width: 100%;
+    }
 }

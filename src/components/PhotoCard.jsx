@@ -3,30 +3,48 @@ import { Link } from 'react-router-dom';
 import './PhotoCard.css';
 
 function PhotoCard(props) {
-
-    const rotationDegree_deg = 20
-    const translationAmount_px = 120
-
+    const rotationDegree_deg = 20;
+    const translationAmount_em = 2;
+    const transitionTime = 0.4;
 
     const reversedPhotoPaths = [...props.photopaths].reverse();
     const [isHovered, setIsHovered] = useState(false);
+    const [zIndexShift, setZIndexShift] = useState(false);
+
+    // Conditionally define inline styles based on screen size
+    const isLargeScreen = window.innerWidth > 768;
 
     const srcFanElements = reversedPhotoPaths.map((src, index) => {
+        const zIndex = zIndexShift ? 10 + index : index;
+
+        const handleTransitionEnd = () => {
+            if (!isHovered) {
+                setZIndexShift(false);
+            }
+        };
+
+        const boxShadowStyle = isHovered
+            ? '1em 1em 1em rgba(0, 0, 0, 0.5)'
+            : 'none';
+
         const transformStyle = {
-            transform: isHovered
-                ? `translateX(${translationAmount_px + index * -translationAmount_px}px) translateY(0px) rotate(${rotationDegree_deg + index * -rotationDegree_deg}deg)`
-                : 'translateX(0px) translateY(0px) rotate(0deg)', // Return to normal state
-            transition: 'transform 0.5s ease-in-out, opacity 0.5s ease-in-out',
+            transform: isHovered && isLargeScreen
+                ? `translateX(${translationAmount_em + index * -translationAmount_em}em) translateY(-1em) rotate(${rotationDegree_deg + index * -rotationDegree_deg}deg)`
+                : 'translateX(0px) translateY(0px) rotate(0deg)',
+            transition: `transform ${transitionTime}s ease-in-out, box-shadow ${transitionTime}s ease-in-out`,
+            zIndex: zIndex,
+            boxShadow: isLargeScreen ? boxShadowStyle : 'none',
         };
 
         return (
             <figure
-                className={`photo__card__figure ${isHovered ? 'hovered' : ''}`}
+                className={`photo__card ${isHovered ? 'hovered' : ''}`}
                 key={index}
-                id={`photo__card__figure-${index}`}
+                id={`photo__card-${index}`}
                 style={transformStyle}
+                onTransitionEnd={() => handleTransitionEnd()}
             >
-                <img src={src} className={`photo__card__img`} />
+                <img src={src} alt='cover and sub cards' />
             </figure>
         );
     });
@@ -35,10 +53,10 @@ function PhotoCard(props) {
         <>
             <div
                 className={`photo__card ${isHovered ? 'hovered' : ''}`}
-                onMouseEnter={() => setIsHovered(true)}
+                onMouseEnter={() => { setIsHovered(true); setZIndexShift(true); }}
                 onMouseLeave={() => setIsHovered(false)}
             >
-                <Link className='photo__card__link' to={props.paths}>
+                <Link to={props.path}>
                     <div className='photo__card__photostack'>
                         {srcFanElements}
                     </div>

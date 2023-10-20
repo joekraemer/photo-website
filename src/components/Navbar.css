@@ -6,16 +6,17 @@
     position: sticky;
     top: 0;
     z-index: 999;
-    margin-bottom: 60px;
-    height: 100px;
+    margin-bottom: 1em;
+    height: 4em;
 }
 
 .navbar-container {
     display: flex;
     justify-content: space-between;
-    height: 70px;
+    height: 1.4em;
     align-items: center;
     width: 100%;
+    margin-top: 1em;
 }
 
 .navbar-logo {
@@ -43,7 +44,7 @@
     text-align: center;
     width: 60vw;
     justify-content: end;
-    margin-right: 2rem;
+    margin-right: 0.5rem;
 }
 
 .nav-menu-mobile {

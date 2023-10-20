@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal'; // Import the Modal component
 import { retrieveImageFromS3 } from '../services/AWSService.js'; // Import the AWS service
+import exifr from 'exifr';
 
 function Photo({ src }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [exifData, setExifData] = useState(null);
     const [imageData, setImageData] = useState(null);
 
-    const openModal = () => {
+
+    const openModal = async () => {
+        try {
+            const data = await exifr.parse(src);
+            setExifData(data);
+        } catch (error) {
+            console.error('Error reading EXIF data:', error);
+        }
+
         console.log('open modal');
         setIsModalOpen(true);
     };
@@ -36,9 +46,10 @@ function Photo({ src }) {
         <>
             <figure className={`photo__figure`} onClick={(event) => openModal(event)}>
                 <img className={`photo__img--${aspectClass}`} src={src} alt="Photo" loading="lazy" />
-                {imageData && <img className={`photo__img--${aspectClass}`} src={URL.createObjectURL(imageData)} alt="Photo" loading="lazy" />}
-            </figure>
-            {isModalOpen && <Modal src={src} onClose={closeModal} />}
+                {imageData && <img className={`photo__img--${aspectClass}`} src={URL.createObjectURL(imageData)} alt={`thumbnail-${src}`} loading="lazy" />}
+            </figure >
+            {isModalOpen && <Modal src={src} onClose={closeModal} exifData={exifData} />
+            }
         </>
     );
 }

@@ -15,13 +15,14 @@ function App() {
       <div className='main__container'>
         <Router>
           <Navbar />
-          <Routes>
-            <Route path='/' element={<Home />} />
-            <Route path='/photos' element={<PhotosPage />} />
-            <Route path='/contact' element={<Contact />} />
-            <Route path='/southkorea' element={<SouthKorea />} />
-            <Route path='/southafrica' element={<SouthAfrica />} />
-          </Routes>
+          <div className="content__container">
+            <Routes>
+              <Route path='/' element={<Home />} />
+              <Route path='/photos' element={<PhotosPage />} />
+              <Route path='/contact' element={<Contact />} />
+              <Route path='/southkorea' element={<SouthKorea />} />
+            </Routes>
+          </div>
         </Router>
       </div>
 
