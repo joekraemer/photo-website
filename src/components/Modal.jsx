@@ -24,7 +24,10 @@ function Modal({ src, onClose }) {
         <div className="modal">
             <div className="modal-content">
                 <img className="modal-img" src={src} alt="Full Resolution Photo" />
-                <button className='modal-button' onClick={onClose}>Close</button>
+                <div className='modal-button' onClick={onClose}>
+                    <i className='fas fa-times' onClick={onClose} />
+                </div>
+
             </div>
         </div>
     );

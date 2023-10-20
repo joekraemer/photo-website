@@ -1,6 +1,5 @@
 import React from 'react'
 import '../../App.css'
-import PhotoCard from '../PhotoCard'
 import HeroSection from '../HeroSection'
 import TextHeaderWithLine from '../TextHeaderWithLine'
 import PhotoGrid from '../PhotoGrid'
