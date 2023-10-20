@@ -6,17 +6,34 @@ function PhotoCard(props) {
 
     const rotationDegree_deg = 20
     const translationAmount_px = 120
+    const transitionTime = 0.5
 
 
     const reversedPhotoPaths = [...props.photopaths].reverse();
     const [isHovered, setIsHovered] = useState(false);
+    const [zIndexShift, setZIndexShift] = useState(false);
 
     const srcFanElements = reversedPhotoPaths.map((src, index) => {
+        const zIndex = zIndexShift ? 10 + index : index;
+
+        // Function to remove the hovered class at the end of the animation
+        const handleTransitionEnd = () => {
+            if (!isHovered) {
+                setZIndexShift(false);
+            }
+        };
+
+        const boxShadowStyle = isHovered
+            ? '1em 1em 1em rgba(0, 0, 0, 0.5)' // Customize as needed
+            : 'none';
+
         const transformStyle = {
             transform: isHovered
-                ? `translateX(${translationAmount_px + index * -translationAmount_px}px) translateY(0px) rotate(${rotationDegree_deg + index * -rotationDegree_deg}deg)`
+                ? `translateX(${translationAmount_px + index * -translationAmount_px}px) translateY(-10px) rotate(${rotationDegree_deg + index * -rotationDegree_deg}deg)`
                 : 'translateX(0px) translateY(0px) rotate(0deg)', // Return to normal state
-            transition: 'transform 0.5s ease-in-out, opacity 0.5s ease-in-out',
+            transition: `transform ${transitionTime}s ease-in-out, box-shadow ${transitionTime}s ease-in-out`,
+            zIndex: zIndex,
+            boxShadow: boxShadowStyle, // Apply box shadow when hovered
         };
 
         return (
@@ -25,6 +42,7 @@ function PhotoCard(props) {
                 key={index}
                 id={`photo__card__figure-${index}`}
                 style={transformStyle}
+                onTransitionEnd={() => handleTransitionEnd()} // Handle the transition end event
             >
                 <img src={src} className={`photo__card__img`} />
             </figure>
@@ -35,7 +53,7 @@ function PhotoCard(props) {
         <>
             <div
                 className={`photo__card ${isHovered ? 'hovered' : ''}`}
-                onMouseEnter={() => setIsHovered(true)}
+                onMouseEnter={() => { setIsHovered(true); setZIndexShift(true); }}
                 onMouseLeave={() => setIsHovered(false)}
             >
                 <Link className='photo__card__link' to={props.paths}>
