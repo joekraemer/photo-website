@@ -1,7 +1,7 @@
 /* Photo Card */
 .photo__card {
     width: 100%;
-    margin: 1em;
+    margin: 0;
 }
 
 .photo__card__link {

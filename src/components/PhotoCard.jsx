@@ -5,8 +5,8 @@ import './PhotoCard.css';
 function PhotoCard(props) {
 
     const rotationDegree_deg = 20
-    const translationAmount_px = 120
-    const transitionTime = 0.5
+    const translationAmount_em = 2
+    const transitionTime = 0.4
 
 
     const reversedPhotoPaths = [...props.photopaths].reverse();
@@ -29,7 +29,7 @@ function PhotoCard(props) {
 
         const transformStyle = {
             transform: isHovered
-                ? `translateX(${translationAmount_px + index * -translationAmount_px}px) translateY(-10px) rotate(${rotationDegree_deg + index * -rotationDegree_deg}deg)`
+                ? `translateX(${translationAmount_em + index * -translationAmount_em}em) translateY(-1em) rotate(${rotationDegree_deg + index * -rotationDegree_deg}deg)`
                 : 'translateX(0px) translateY(0px) rotate(0deg)', // Return to normal state
             transition: `transform ${transitionTime}s ease-in-out, box-shadow ${transitionTime}s ease-in-out`,
             zIndex: zIndex,
