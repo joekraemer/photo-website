@@ -21,7 +21,7 @@ function Navbar() {
     // Update the mobileScreen state when the window is resized
     useEffect(() => {
         const handleResize = () => {
-            setMobileScreen(window.innerWidth < 768);
+            setMobileScreen(window.innerWidth < 730);
         };
 
         window.addEventListener('resize', handleResize);
