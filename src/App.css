@@ -31,11 +31,12 @@
 .main__container {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 0 1em;
+  padding: 0 3em;
+  min-height: 100vh;
 }
 
 .content__container {
-  padding: 0 3em;
+  padding: 0em;
 }
 
 @keyframes App-logo-spin {
