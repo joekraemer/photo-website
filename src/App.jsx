@@ -21,6 +21,7 @@ function App() {
               <Route path='/photos' element={<PhotosPage />} />
               <Route path='/contact' element={<Contact />} />
               <Route path='/southkorea' element={<SouthKorea />} />
+              <Route path='/southafrica' element={<SouthAfrica />} />
             </Routes>
           </div>
         </Router>

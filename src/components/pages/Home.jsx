@@ -10,11 +10,11 @@ function Home() {
             <HeroSection />
             <TextHeaderWithLine title='Recent Favorites' />
             <PhotoGrid photoSources={[
-                "/photos/recentfavorites/DSC00266.jpg",
-                "/photos/recentfavorites/DSC09335.jpg",
-                "/photos/recentfavorites/DSC07277.jpg",
-                "/photos/recentfavorites/DSC05344.jpg",
-                "/photos/recentfavorites/DSC05649.jpg"]} />
+                "recentfavorites/DSC00266.jpg",
+                "recentfavorites/DSC09335.jpg",
+                "recentfavorites/DSC07277.jpg",
+                "recentfavorites/DSC05344.jpg",
+                "recentfavorites/DSC05649.jpg"]} />
 
 
         </>

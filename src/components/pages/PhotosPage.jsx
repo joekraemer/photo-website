@@ -20,7 +20,7 @@ function PhotosPage() {
                         "/photos/recentfavorites/DSC07277.jpg",
                         "/photos/portfolio/South Korea/DSC00085.jpg"]}
                     title="South Africa"
-                    path='/southkorea'
+                    path='/southafrica'
                 />
                 <PhotoCard
                     photopaths={["/photos/recentfavorites/DSC07277.jpg",
