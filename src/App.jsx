@@ -8,6 +8,7 @@ import PhotosPage from './components/pages/PhotosPage'
 import Contact from './components/pages/Contact';
 import SouthKorea from './components/pages/SouthKorea';
 import SouthAfrica from './components/pages/SouthAfrica';
+import Footer from './components/Footer';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
               <Route path='/southafrica' element={<SouthAfrica />} />
             </Routes>
           </div>
+          <Footer />
         </Router>
       </div>
 

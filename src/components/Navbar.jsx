@@ -1,12 +1,36 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
-import './Navbar.css'
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import './Navbar.css';
+import NavMenuDesktop from './NavMenuDesktop';
+import NavMenuMobile from './NavMenuMobile.jsx';
 
 function Navbar() {
     const [click, setClick] = useState(false);
+    const [mobileScreen, setMobileScreen] = useState(false);
 
     const handleClick = () => setClick(!click);
     const closeMobileMenu = () => setClick(false);
+
+    // Define the menu items
+    const menuItems = [
+        { text: 'Photos', link: '/photos' },
+        { text: 'Videos', link: '/videos' },
+        { text: 'Contact', link: '/contact' },
+    ];
+
+    // Update the mobileScreen state when the window is resized
+    useEffect(() => {
+        const handleResize = () => {
+            setMobileScreen(window.innerWidth < 730);
+        };
+
+        window.addEventListener('resize', handleResize);
+
+        // Clean up the event listener when the component unmounts
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
 
     return (
         <>
@@ -20,46 +44,14 @@ function Navbar() {
                     </div>
 
                     {/* Desktop Menu */}
-                    <ol className='nav-menu-desktop'>
-                        <li className='nav-item'>
-                            <Link to='/photos' className='nav-links' onClick={closeMobileMenu}>
-                                Photos
-                            </Link>
-                        </li>
-                        <li className='nav-item'>
-                            <Link to='/videos' className='nav-links' onClick={closeMobileMenu}>
-                                Videos
-                            </Link>
-                        </li>
-                        <li className='nav-item'>
-                            <Link to='/contact' className='nav-links' onClick={closeMobileMenu}>
-                                Contact
-                            </Link>
-                        </li>
-                    </ol>
+                    {!mobileScreen && <NavMenuDesktop menuItems={menuItems} closeMobileMenu={closeMobileMenu} />}
 
-                    {/* TODO: This could be a different module */}
-                    <ol className={click ? 'nav-menu-mobile active' : 'nav-menu-mobile'}>
-                        <li className='nav-item-mobile'>
-                            <Link to='/photos' className='nav-links-mobile' onClick={closeMobileMenu}>
-                                Photos
-                            </Link>
-                        </li>
-                        <li className='nav-item-mobile'>
-                            <Link to='/videos' className='nav-links-mobile' onClick={closeMobileMenu}>
-                                Videos
-                            </Link>
-                        </li>
-                        <li className='nav-item-mobile'>
-                            <Link to='/contact' className='nav-links-mobile' onClick={closeMobileMenu}>
-                                Contact
-                            </Link>
-                        </li>
-                    </ol>
+                    {/* Mobile Menu */}
+                    {mobileScreen && <NavMenuMobile menuItems={menuItems} click={click} closeMobileMenu={closeMobileMenu} />}
                 </div>
             </nav>
         </>
-    )
+    );
 }
 
-export default Navbar
+export default Navbar;
