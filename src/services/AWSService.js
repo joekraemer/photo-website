@@ -50,12 +50,10 @@ export const listBucketContents = async (bucketName) => {
     }
 };
 
-export const getBucketContents = async (bucketName) => {
+export const getFolderContents = async (bucketName, folderPath) => {
     const command = new ListObjectsV2Command({
         Bucket: bucketName,
-        // The default and maximum number of keys returned is 1000. This limits it to
-        // one for demonstration purposes.
-        MaxKeys: 10,
+        Prefix: folderPath
     });
 
     try {
@@ -65,3 +63,25 @@ export const getBucketContents = async (bucketName) => {
         console.error(err);
     }
 };
+
+
+export const listFoldersInDirectory = async (bucketName, prefix) => {
+    const delimiter = '/';
+
+    if (prefix && !prefix.endsWith(delimiter)) {
+        prefix += delimiter;
+    }
+
+    const command = new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: prefix,
+        Delimiter: delimiter
+    });
+
+    try {
+        const data = await s3Client.send(command);
+        return data.CommonPrefixes.map(prefix => prefix.Prefix);
+    } catch (error) {
+        throw error;
+    }
+}

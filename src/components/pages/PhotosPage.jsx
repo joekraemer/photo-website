@@ -1,9 +1,32 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import '../../App.css'
 import './PhotosPage.css'
 import PhotoCard from '../PhotoCard'
+import { listFoldersInDirectory } from '../../services/AWSService';
+
 
 function PhotosPage() {
+
+    const bucketName = 'photo-website-photos';
+    const [bucketFolders, setBucketFolders] = useState([]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const folderpaths = await listFoldersInDirectory(bucketName, 'portfolio');
+
+                // removes the leading '/portfolio/' and the trailing '/' so we only have the sub folder name
+                const foldernames = folderpaths.map((str) => str.replace(/^portfolio\//, '').replace(/\/$/, ''));
+
+                setBucketFolders(foldernames);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        };
+
+        fetchData();
+    }, [bucketName]);
+
     return (
         <>
             <h1>Photos</h1>
