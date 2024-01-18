@@ -1,9 +1,11 @@
 import { GetObjectCommand, S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
+const credentials = require('../config/aws-credentials.json');
+
 const s3Client = new S3Client({
     region: 'us-west-1',
-    credentials: CREDENTIAL,
+    credentials: credentials,
 });
 
 export const retrieveImageFromS3 = async (key) => {
