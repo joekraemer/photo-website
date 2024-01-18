@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from './Modal'; // Import the Modal component
+import { retrieveImageFromS3 } from '../services/AWSService.js'; // Import the AWS service
 import exifr from 'exifr';
 
 function Photo({ src }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [exifData, setExifData] = useState(null);
+    const [imageSrc, setImageSrc] = useState(null);
 
 
     const openModal = async () => {
@@ -27,15 +29,26 @@ function Photo({ src }) {
         }
     };
 
+    useEffect(() => {
+        // Load the image from S3 when the component mounts
+        retrieveImageFromS3(src)
+            .then((imageURL) => {
+                setImageSrc(imageURL);
+            })
+            .catch((error) => {
+                console.error('Error loading image from S3:', error);
+            });
+    }, [src]);
 
     const aspectClass = calculateAspectClass(src);
 
     return (
         <>
             <figure className={`photo__figure`} onClick={(event) => openModal(event)}>
-                <img className={`photo__img--${aspectClass}`} src={src} alt={`thumbnail-${src}`} loading="lazy" />
-            </figure>
-            {isModalOpen && <Modal src={src} onClose={closeModal} exifData={exifData} />}
+                {imageSrc && <img className={`photo__img--${aspectClass}`} src={imageSrc} alt={`thumbnail-${src}`} loading="lazy" />}
+            </figure >
+            {isModalOpen && <Modal src={src} onClose={closeModal} exifData={exifData} />
+            }
         </>
     );
 }
