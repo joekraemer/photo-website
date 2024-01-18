@@ -3,6 +3,7 @@ config.js
 
 # credendials
 keys.js
+/src/config/aws-credentials.json
 
 # dependencies
 /node_modules
