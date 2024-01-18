@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react'
 import '../../App.css'
 import './PhotosPage.css'
 import PhotoCard from '../PhotoCard'
-import { listFoldersInDirectory } from '../../services/AWSService';
+import { listFoldersInDirectory, listPhotosInFolder } from '../../services/AWSService';
 
 
 function PhotosPage() {
 
     const bucketName = 'photo-website-photos';
     const [bucketFolders, setBucketFolders] = useState([]);
+    const [allPhotoData, setAllPhotoData] = useState([]);
 
+    // Grab all of the sub folders in the portfolio folder
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -27,55 +29,58 @@ function PhotosPage() {
         fetchData();
     }, [bucketName]);
 
+    const fetchTitlePhotosForFolder = async (folder) => {
+        try {
+            const photos = await listPhotosInFolder(bucketName, `portfolio/${folder}`);
+
+            // We will look for a photo called "Cover"
+
+
+            // If there is no Cover photo, use the first photo
+            const coverPhotoPath = photos.length > 0 ? photos[0] : null;
+            return { folder, coverPhotoPath };
+        } catch (error) {
+            console.error(`Error fetching photos for ${folder}:`, error);
+            return { folder, coverPhotoPath: null };
+        }
+    };
+
+    const fetchAllPhotos = async () => {
+        const photoDataPromises = bucketFolders.map((folder) => fetchTitlePhotosForFolder(folder));
+        const allPhotoData = await Promise.all(photoDataPromises);
+        return allPhotoData;
+    };
+
+    useEffect(() => {
+        const fetchAndSetPhotos = async () => {
+            const allPhotoData = await fetchAllPhotos();
+            // Set state with the fetched photo data
+            // Update this logic based on your PhotoCard component structure
+            console.log(allPhotoData);
+            setAllPhotoData(allPhotoData);
+        };
+
+        if (bucketFolders.length > 0) {
+            fetchAndSetPhotos();
+        }
+    }, [bucketFolders]);
+
     return (
         <>
             <h1>Photos</h1>
             <div className="photo-card-container">
-                <PhotoCard
-                    photopaths={["/photos/portfolio/South Korea/DSC09123.jpg",
-                        "/photos/portfolio/South Korea/DSC00021.jpg",
-                        "/photos/portfolio/South Korea/DSC00085.jpg",]}
-                    title="South Korea"
-                    path='/southkorea'
-                />
-                <PhotoCard
-                    photopaths={["/photos/portfolio/South Africa/DSC02715.jpg",
-                        "/photos/recentfavorites/DSC07277.jpg",
-                        "/photos/portfolio/South Korea/DSC00085.jpg"]}
-                    title="South Africa"
-                    path='/southafrica'
-                />
-                <PhotoCard
-                    photopaths={["/photos/recentfavorites/DSC07277.jpg",
-                        "/photos/recentfavorites/DSC09335.jpg",
-                        "/photos/recentfavorites/DSC00266.jpg",]}
-                    title="Tanzania"
-                    path='/southkorea'
-                />
-                <PhotoCard
-                    photopaths={["/photos/portfolio/South Korea/DSC00085.jpg",
-                        "/photos/recentfavorites/DSC09335.jpg",
-                        "/photos/recentfavorites/DSC00266.jpg",]}
-                    title="Another Place"
-                    path='/southkorea'
-                />
-                <PhotoCard
-                    photopaths={["/photos/recentfavorites/DSC09335.jpg",
-                        "/photos/portfolio/South Korea/DSC00085.jpg",
-                        "/photos/portfolio/South Africa/DSC02715.jpg",]}
-                    title="North Korea"
-                    path='/southkorea'
-                />
-                <PhotoCard
-                    photopaths={["/photos/portfolio/South Korea/DSC00021.jpg",
-                        "/photos/portfolio/South Korea/DSC09123.jpg",
-                        "/photos/portfolio/South Korea/DSC00085.jpg",]}
-                    title="Taiwan"
-                    path='/southkorea'
-                />
+                {/* Render PhotoCards based on fetched data */}
+                {allPhotoData.map((data) => (
+                    <PhotoCard
+                        key={data.folder}
+                        photopath={`${data.coverPhotoPath}`} // Adjust the path as needed
+                        title={data.folder}
+                        path={data.folder}
+                    />
+                ))}
             </div>
         </>
-    )
+    );
 }
 
-export default PhotosPage
+export default PhotosPage;
