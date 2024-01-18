@@ -9,6 +9,8 @@ const s3Client = new S3Client({
 });
 
 export const retrieveImageFromS3 = async (key) => {
+    // Key: this should be a string like this "recentfavorites/DSC00266.jpg". The bucket gets added here so just the subfolder paths
+
     const command = new GetObjectCommand({
         Bucket: 'photo-website-photos',
         Key: key,
@@ -87,3 +89,30 @@ export const listFoldersInDirectory = async (bucketName, prefix) => {
         throw error;
     }
 }
+
+export const listPhotosInFolder = async (bucketName, folderPath) => {
+    const delimiter = '/';
+
+    if (!folderPath.endsWith(delimiter)) {
+        folderPath += delimiter;
+    }
+
+    const command = new ListObjectsV2Command({
+        Bucket: bucketName,
+        Prefix: folderPath,
+        Delimiter: delimiter
+    });
+
+    try {
+        const data = await s3Client.send(command);
+
+        // Filter out folders from the list and return only photo paths
+        const photoPaths = data.Contents
+            .filter(object => !object.Key.endsWith(delimiter))
+            .map(object => object.Key);
+
+        return photoPaths;
+    } catch (error) {
+        throw error;
+    }
+};

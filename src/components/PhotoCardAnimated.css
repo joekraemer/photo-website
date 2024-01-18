@@ -14,6 +14,14 @@
     height: fit-content;
 }
 
+.photo__card__photostack {
+    position: relative;
+    display: grid;
+    width: 100%;
+    flex: 4;
+    height: 100%;
+}
+
 .photo__card figure {
     grid-area: 1/-1;
     width: 100%;
