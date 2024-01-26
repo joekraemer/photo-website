@@ -10,7 +10,11 @@ import SouthKorea from './components/pages/SouthKorea';
 import SouthAfrica from './components/pages/SouthAfrica';
 import AlbumPage from './components/pages/AlbumPage';
 import Footer from './components/Footer';
+import { Amplify } from 'aws-amplify';
 
+import amplifyconfig from './config/amplifyconfiguration.json';
+
+Amplify.configure(amplifyconfig);
 
 function App() {
 
