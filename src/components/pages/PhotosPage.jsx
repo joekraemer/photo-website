@@ -4,10 +4,8 @@ import './PhotosPage.css'
 import PhotoCard from '../PhotoCard'
 import { listFoldersInDirectory, listPhotosInFolder } from '../../services/AWSService';
 
-
 function PhotosPage() {
 
-    const bucketName = 'photo-website-photos';
     const [bucketFolders, setBucketFolders] = useState([]);
     const [allPhotoData, setAllPhotoData] = useState([]);
 
@@ -15,7 +13,7 @@ function PhotosPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const folderpaths = await listFoldersInDirectory(bucketName, 'portfolio');
+                const folderpaths = await listFoldersInDirectory('portfolio');
 
                 // removes the leading '/portfolio/' and the trailing '/' so we only have the sub folder name
                 const foldernames = folderpaths.map((str) => str.replace(/^portfolio\//, '').replace(/\/$/, ''));
@@ -27,21 +25,21 @@ function PhotosPage() {
         };
 
         fetchData();
-    }, [bucketName]);
+    }, []);
 
     const fetchTitlePhotosForFolder = async (folder) => {
         try {
-            const photos = await listPhotosInFolder(bucketName, `portfolio/${folder}`);
+            const photos = await listPhotosInFolder(`portfolio/${folder}`);
 
             // We will look for a photo called "Cover"
 
 
             // If there is no Cover photo, use the first photo
-            const coverPhotoPath = photos.length > 0 ? photos[0] : null;
-            return { folder, coverPhotoPath };
+            const coverPhotoObj = photos.length > 0 ? photos[0] : null;
+            return { folder, coverPhotoObj };
         } catch (error) {
             console.error(`Error fetching photos for ${folder}:`, error);
-            return { folder, coverPhotoPath: null };
+            return { folder, coverPhotoObj: null };
         }
     };
 
@@ -73,7 +71,7 @@ function PhotosPage() {
                 {allPhotoData.map((data) => (
                     <PhotoCard
                         key={data.folder}
-                        photopath={`${data.coverPhotoPath}`} // Adjust the path as needed
+                        photoObj={data.coverPhotoObj} // Adjust the path as needed
                         title={data.folder}
                         path={data.folder}
                     />
