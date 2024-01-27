@@ -1,11 +1,12 @@
 import { getUrl, list } from 'aws-amplify/storage';
 
 export const retrieveImageFromS3 = async (key) => {
-    // Key: This has to be the object from the list() function
+    // Key: This converts a str source into a src object for aws to use
 
     try {
-        const url = await getUrl(key, { expiresIn: 30 });
-        return url
+        const res = await list({ prefix: key });
+        const urlObj = await getUrl(res.items[0]);
+        return urlObj
 
     } catch (error) {
         console.error("Error retrieving signed URL from S3:", error);

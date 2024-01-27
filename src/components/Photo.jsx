@@ -11,8 +11,8 @@ function Photo({ src }) {
 
     const openModal = async () => {
         try {
-            const data = await exifr.parse(src);
-            setExifData(data);
+            // const data = await exifr.parse(imageSrc.href);
+            // setExifData(data);
         } catch (error) {
             console.error('Error reading EXIF data:', error);
         }
@@ -29,7 +29,7 @@ function Photo({ src }) {
         }
     };
 
-    useEffect(() => {
+    useEffect(async () => {
         // Load the image from S3 when the component mounts
         getUrl(src)
             .then((res) => {
