@@ -15,7 +15,7 @@ function PhotoCard(props) {
             .catch((error) => {
                 console.error('Error loading image from S3:', error);
             });
-    }, [props.photopath]);
+    }, [props.photoObj]);
 
     return (
         <>

@@ -27,7 +27,7 @@ function AlbumPage() {
         };
 
         fetchData();
-    }, []);
+    }, [folderPath]);
 
     return (
         <>

@@ -12,7 +12,7 @@ import AlbumPage from './components/pages/AlbumPage';
 import Footer from './components/Footer';
 import { Amplify } from 'aws-amplify';
 
-import amplifyconfig from './config/amplifyconfiguration.json';
+import amplifyconfig from './amplifyconfiguration.json';
 
 Amplify.configure(amplifyconfig);
 
