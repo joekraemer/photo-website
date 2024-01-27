@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal'; // Import the Modal component
-import { retrieveImageFromS3 } from '../services/AWSService.js'; // Import the AWS service
+import { getUrl } from 'aws-amplify/storage';
 import exifr from 'exifr';
 
 function Photo({ src }) {
@@ -31,9 +31,9 @@ function Photo({ src }) {
 
     useEffect(() => {
         // Load the image from S3 when the component mounts
-        retrieveImageFromS3(src)
-            .then((imageURL) => {
-                setImageSrc(imageURL);
+        getUrl(src)
+            .then((res) => {
+                setImageSrc(res.url);
             })
             .catch((error) => {
                 console.error('Error loading image from S3:', error);

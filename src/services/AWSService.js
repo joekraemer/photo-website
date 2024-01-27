@@ -1,7 +1,7 @@
 import { getUrl, list } from 'aws-amplify/storage';
 
 export const retrieveImageFromS3 = async (key) => {
-    // Key: this should be a string like this "recentfavorites/DSC00266.jpg". The bucket gets added here so just the subfolder paths
+    // Key: This has to be the object from the list() function
 
     try {
         const url = await getUrl(key, { expiresIn: 30 });
@@ -22,7 +22,6 @@ export const getFolderContents = async (folderPath) => {
     }
 };
 
-// TODO: this will return more than just folders. I don't know if you can add delimiters with amplify.list
 export const listFoldersInDirectory = async (prefix) => {
 
     // Ensures that the prefix ends with the specified delimiter
@@ -33,7 +32,23 @@ export const listFoldersInDirectory = async (prefix) => {
 
     try {
         const data = await list({ prefix: prefix });
-        return data.CommonPrefixes.map(prefix => prefix.Prefix);
+
+        // Extract unique folder names from the current directory
+        const uniqueFolders = [];
+        const seenFolders = {};
+
+        data.items.forEach(item => {
+            const parts = item.key.split(delimiter);
+            if (parts.length > 1) {
+                const folder = parts[1];
+                if (!seenFolders[folder]) {
+                    seenFolders[folder] = true;
+                    uniqueFolders.push(folder);
+                }
+            }
+        });
+
+        return uniqueFolders;
     } catch (error) {
         throw error;
     }
@@ -50,11 +65,10 @@ export const listPhotosInFolder = async (folderPath) => {
         const data = await list({ prefix: folderPath });
 
         // Filter out folders from the list and return only photo paths
-        const photoPaths = data.Contents
-            .filter(object => !object.Key.endsWith(delimiter))
-            .map(object => object.Key);
+        const photos = data.items
+            .filter(object => !object.key.endsWith(delimiter));
 
-        return photoPaths;
+        return photos;
     } catch (error) {
         throw error;
     }

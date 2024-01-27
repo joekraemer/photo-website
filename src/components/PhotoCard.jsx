@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { retrieveImageFromS3 } from '../services/AWSService.js'; // Import the AWS service
+import { getUrl } from 'aws-amplify/storage';
 import './PhotoCard.css';
 
 function PhotoCard(props) {
@@ -8,9 +8,9 @@ function PhotoCard(props) {
 
     useEffect(() => {
         // Load the image from S3 when the component mounts
-        retrieveImageFromS3(props.photopath)
-            .then((imageURL) => {
-                setImageSrc(imageURL);
+        getUrl(props.photoObj)
+            .then((res) => {
+                setImageSrc(res.url);
             })
             .catch((error) => {
                 console.error('Error loading image from S3:', error);

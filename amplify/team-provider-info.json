@@ -46,5 +46,29 @@
         }
       }
     }
+  },
+  "photosite": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-photowebsite-photosite-145516-authRole",
+      "UnauthRoleArn": "arn:aws:iam::172805874134:role/amplify-photowebsite-photosite-145516-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::172805874134:role/amplify-photowebsite-photosite-145516-authRole",
+      "Region": "us-west-1",
+      "DeploymentBucketName": "amplify-photowebsite-photosite-145516-deployment",
+      "UnauthRoleName": "amplify-photowebsite-photosite-145516-unauthRole",
+      "StackName": "amplify-photowebsite-photosite-145516",
+      "StackId": "arn:aws:cloudformation:us-west-1:172805874134:stack/amplify-photowebsite-photosite-145516/f9c2e1d0-bc9d-11ee-ac65-0282730484b3",
+      "AmplifyAppId": "d1q143hn2lemue"
+    },
+    "categories": {
+      "auth": {
+        "photowebsite7138e5ca": {}
+      },
+      "storage": {
+        "photowebsite056c58e1": {
+          "bucketName": "photo-website-photos",
+          "region": "us-west-1"
+        }
+      }
+    }
   }
 }
