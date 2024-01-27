@@ -17,7 +17,10 @@ function AlbumPage() {
             try {
                 const res = await listPhotosInFolder(folderPath);
 
-                setPhotoKeys(res);
+                // remove photos that do not have the word thumbnail in them
+                const filteredPhotos = res.filter(photoObj => photoObj.key.includes('thumb'));
+
+                setPhotoKeys(filteredPhotos);
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
