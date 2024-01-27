@@ -1,23 +1,10 @@
-import { GetObjectCommand, S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
-
-const credentials = require('../config/aws-credentials.json');
-
-const s3Client = new S3Client({
-    region: 'us-west-1',
-    credentials: credentials,
-});
+import { getUrl, list } from 'aws-amplify/storage';
 
 export const retrieveImageFromS3 = async (key) => {
-    // Key: this should be a string like this "recentfavorites/DSC00266.jpg". The bucket gets added here so just the subfolder paths
-
-    const command = new GetObjectCommand({
-        Bucket: 'photo-website-photos',
-        Key: key,
-    });
+    // Key: This has to be the object from the list() function
 
     try {
-        const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        const url = await getUrl(key, { expiresIn: 30 });
         return url
 
     } catch (error) {
@@ -26,92 +13,62 @@ export const retrieveImageFromS3 = async (key) => {
     }
 };
 
-export const listBucketContents = async (bucketName) => {
-    const command = new ListObjectsV2Command({
-        Bucket: bucketName,
-        // The default and maximum number of keys returned is 1000. This limits it to
-        // one for demonstration purposes.
-        MaxKeys: 10,
-    });
-
+export const getFolderContents = async (folderPath) => {
     try {
-        let isTruncated = true;
-
-        console.log("Your bucket contains the following objects:\n");
-        let contents = "";
-
-        while (isTruncated) {
-            const { Contents, IsTruncated, NextContinuationToken } =
-                await s3Client.send(command);
-            const contentsList = Contents.map((c) => ` • ${c.Key}`).join("\n");
-            contents += contentsList + "\n";
-            isTruncated = IsTruncated;
-            command.input.ContinuationToken = NextContinuationToken;
-        }
-        console.log(contents);
-    } catch (err) {
-        console.error(err);
-    }
-};
-
-export const getFolderContents = async (bucketName, folderPath) => {
-    const command = new ListObjectsV2Command({
-        Bucket: bucketName,
-        Prefix: folderPath
-    });
-
-    try {
-        const res = await s3Client.send(command);
+        const res = await list({ prefix: folderPath });
         return res.Contents
     } catch (err) {
         console.error(err);
     }
 };
 
+export const listFoldersInDirectory = async (prefix) => {
 
-export const listFoldersInDirectory = async (bucketName, prefix) => {
+    // Ensures that the prefix ends with the specified delimiter
     const delimiter = '/';
-
     if (prefix && !prefix.endsWith(delimiter)) {
         prefix += delimiter;
     }
 
-    const command = new ListObjectsV2Command({
-        Bucket: bucketName,
-        Prefix: prefix,
-        Delimiter: delimiter
-    });
-
     try {
-        const data = await s3Client.send(command);
-        return data.CommonPrefixes.map(prefix => prefix.Prefix);
+        const data = await list({ prefix: prefix });
+
+        // Extract unique folder names from the current directory
+        const uniqueFolders = [];
+        const seenFolders = {};
+
+        data.items.forEach(item => {
+            const parts = item.key.split(delimiter);
+            if (parts.length > 1) {
+                const folder = parts[1];
+                if (!seenFolders[folder]) {
+                    seenFolders[folder] = true;
+                    uniqueFolders.push(folder);
+                }
+            }
+        });
+
+        return uniqueFolders;
     } catch (error) {
         throw error;
     }
 }
 
-export const listPhotosInFolder = async (bucketName, folderPath) => {
+export const listPhotosInFolder = async (folderPath) => {
     const delimiter = '/';
 
     if (!folderPath.endsWith(delimiter)) {
         folderPath += delimiter;
     }
 
-    const command = new ListObjectsV2Command({
-        Bucket: bucketName,
-        Prefix: folderPath,
-        Delimiter: delimiter
-    });
-
     try {
-        const data = await s3Client.send(command);
+        const data = await list({ prefix: folderPath });
 
         // Filter out folders from the list and return only photo paths
-        const photoPaths = data.Contents
-            .filter(object => !object.Key.endsWith(delimiter))
-            .map(object => object.Key);
+        const photos = data.items
+            .filter(object => !object.key.endsWith(delimiter));
 
-        return photoPaths;
+        return photos;
     } catch (error) {
         throw error;
     }
