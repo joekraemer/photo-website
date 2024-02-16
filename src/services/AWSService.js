@@ -74,3 +74,41 @@ export const listPhotosInFolder = async (folderPath) => {
         throw error;
     }
 };
+
+async function getAspectRatio(imageUrl) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = function () {
+            const aspectRatio = img.width / img.height;
+            const aspectClass = aspectRatio >= 1 ? 'horizontal' : 'vertical';
+            resolve(aspectClass);
+        };
+        img.onerror = function () {
+            reject(new Error('Failed to load image'));
+        };
+        img.src = imageUrl;
+    });
+}
+
+export const getPhotoThumbURLAspectClass = async (imgObj) => {
+    // This function takes a s3 object and returns the url of the main photo, the thumbnail and the aspect class. This can then be passed to the Photo object
+
+    let full_image_url = null;
+    // Load the image from S3 when the component mounts
+    await getUrl(imgObj)
+        .then((res) => {
+            full_image_url = res.url;
+        })
+        .catch((error) => {
+            console.error('Error loading image from S3:', error);
+        });
+
+
+    // TODO: Get the thumbnail url as well
+    let thumb_image_url = full_image_url
+
+    // Use the thumb url to determine the aspect class
+    const aspectClass = await getAspectRatio(thumb_image_url);
+
+    return [full_image_url, thumb_image_url, aspectClass]
+};

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 import '../../App.css'
-import { listPhotosInFolder } from '../../services/AWSService';
+import { listPhotosInFolder, getPhotoThumbURLAspectClass } from '../../services/AWSService';
 import PhotoGrid from '../PhotoGrid';
 
 
@@ -20,7 +20,15 @@ function AlbumPage() {
                 // remove photos that do not have the word thumbnail in them
                 const filteredPhotos = res.filter(photoObj => photoObj.key.includes('thumb'));
 
-                setPhotoKeys(filteredPhotos);
+
+                // get the URLs of the objects and their thumbnails
+                const photoURLPromises = await filteredPhotos.map((photo) => getPhotoThumbURLAspectClass(photo));
+
+                // Wait for all promises to resolve
+                const photoURLs = await Promise.all(photoURLPromises);
+
+                setPhotoKeys(photoURLs);
+
             } catch (error) {
                 console.error('Error fetching data:', error);
             }

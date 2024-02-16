@@ -13,13 +13,7 @@
     margin: 0;
 }
 
-.photo__img--horizontal {
-    height: 100%;
-    width: 100%;
-    object-fit: contain;
-}
-
-.photo__img--vertical {
+.photo__img {
     height: 100%;
     width: 100%;
     object-fit: contain;
@@ -40,8 +34,7 @@
         /* Photos take full width of the container */
     }
 
-    .photo__img--horizontal,
-    .photo__img--vertical {
+    .photo__img {
         width: 100%;
         /* Photos take full width */
         height: auto;
