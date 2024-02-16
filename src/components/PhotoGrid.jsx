@@ -18,9 +18,9 @@ function PhotoGrid({ photoSources }) {
         const aspectClass = src[2]
 
         if (aspectClass === 'vertical') {
-            currentVerticalRow.push(<Photo key={index} src={fullImageUrl} />);
+            currentVerticalRow.push(<Photo key={index} srcThumb={thumbImageUrl} srcFull={fullImageUrl} />);
         } else {
-            currentHorizontalRow.push(<Photo key={index} src={fullImageUrl} />);
+            currentHorizontalRow.push(<Photo key={index} srcThumb={thumbImageUrl} srcFull={fullImageUrl} />);
         }
 
         // Check if it's time to start a new row

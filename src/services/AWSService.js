@@ -112,3 +112,21 @@ export const getPhotoThumbURLAspectClass = async (imgObj) => {
 
     return [full_image_url, thumb_image_url, aspectClass]
 };
+
+export function findHighResolutionPhotoLocation(src) {
+    // Takes a source string in the thumbnail format and tries to find a high resolution photo that is higher in the folder
+
+    // Check if the path contains "/thumbs/" and ends with "_thumb.jpg"
+    const regex = /\/thumbs\/(.+)_thumb\.jpg$/;
+    const match = src.match(regex);
+
+    if (match) {
+        // If the regex matches, construct the new path without "_thumb" and "/thumbs/"
+        const folderPath = match[1];
+        const newPath = src.replace(`/thumbs/${folderPath}_thumb.jpg`, `/${folderPath}.jpg`);
+        return newPath;
+    } else {
+        // If the regex doesn't match, return null
+        return src;
+    }
+}
