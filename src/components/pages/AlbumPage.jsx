@@ -20,7 +20,6 @@ function AlbumPage() {
                 // remove photos that do not have the word thumbnail in them
                 const filteredPhotos = res.filter(photoObj => photoObj.key.includes('thumb'));
 
-
                 // get the URLs of the objects and their thumbnails
                 const photoURLPromises = await filteredPhotos.map((photo) => getPhotoThumbURLAspectClass(photo));
 
