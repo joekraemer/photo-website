@@ -36,6 +36,9 @@ jobs:
         env:
           # CRA treats warnings as errors in CI by default; keep the build green on lint warnings.
           CI: false
+          # Where photos.json lives (Cloudflare in front of B2). Set under
+          # Settings -> Secrets and variables -> Actions -> Variables.
+          REACT_APP_PHOTOS_BASE_URL: ${{ vars.PHOTOS_BASE_URL }}
         run: npm run build
 
       - name: Upload Pages artifact
