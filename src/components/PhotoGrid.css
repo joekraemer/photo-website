@@ -41,3 +41,11 @@
         /* Maintain aspect ratio */
     }
 }
+.photo__figure {
+    cursor: zoom-in;
+}
+
+.photo__img {
+    display: block;
+    height: auto;
+}

@@ -1,45 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-
-import '../../App.css'
-import { listPhotosInFolder, getPhotoThumbURLAspectClass } from '../../services/AWSService';
+import React from 'react';
+import { Link, useParams } from 'react-router-dom';
+import '../../App.css';
+import './PhotosPage.css';
 import PhotoGrid from '../PhotoGrid';
-
+import useManifest from '../../services/useManifest';
+import { formatAlbumDate } from '../../services/photoService';
 
 function AlbumPage() {
-    let params = useParams()
+    const { slug } = useParams();
+    const { manifest, error, loading } = useManifest();
 
-    const folderPath = 'portfolio/' + params.folder + '/';
-    const [photoKeys, setPhotoKeys] = useState([]);
+    if (loading) return <p className="status__text">Loading…</p>;
+    if (error) return <p className="status__text">Photos are unavailable right now.</p>;
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const res = await listPhotosInFolder(folderPath);
-
-                // remove photos that do not have the word thumbnail in them
-                const filteredPhotos = res.filter(photoObj => photoObj.key.includes('thumb'));
-
-                // get the URLs of the objects and their thumbnails
-                const photoURLPromises = await filteredPhotos.map((photo) => getPhotoThumbURLAspectClass(photo));
-
-                // Wait for all promises to resolve
-                const photoURLs = await Promise.all(photoURLPromises);
-
-                setPhotoKeys(photoURLs);
-
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
-        };
-
-        fetchData();
-    }, [folderPath]);
+    const album = manifest.albums.find((a) => a.slug === slug);
+    if (!album) {
+        return (
+            <>
+                <h1>Album not found</h1>
+                <p><Link to="/photos">Back to all albums</Link></p>
+            </>
+        );
+    }
 
     return (
         <>
-            <h1>Photos / {params.folder}</h1>
-            <PhotoGrid photoSources={photoKeys} />
+            <h1><Link to="/photos" className="breadcrumb">Photos</Link> / {album.title}</h1>
+            {album.date && <p className="album__date">{formatAlbumDate(album.date)}</p>}
+            {album.intro && album.intro.split(/\n{2,}/).map((para, i) => (
+                <p className="album__intro" key={i}>{para}</p>
+            ))}
+            <PhotoGrid photos={album.photos} variant="medium" />
         </>
     );
 }

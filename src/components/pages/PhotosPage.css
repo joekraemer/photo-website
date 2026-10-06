@@ -21,3 +21,32 @@
         width: 100%;
     }
 }
+.photo__card__date,
+.album__date {
+    text-align: center;
+    font-family: 'Montserrat';
+    font-size: 14px;
+    color: #666;
+    margin: 0.25em 0 0;
+}
+
+.album__date {
+    text-align: left;
+    margin-bottom: 1em;
+}
+
+.album__intro {
+    font-family: 'Montserrat';
+    line-height: 1.6;
+    max-width: 48em;
+}
+
+.breadcrumb {
+    color: inherit;
+    text-decoration: none;
+}
+
+.status__text {
+    font-family: 'Montserrat';
+    color: #666;
+}

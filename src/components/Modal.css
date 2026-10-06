@@ -62,3 +62,11 @@
     margin: .25em;
     padding: .25em;
 }
+.exif__data .exif__album {
+    font-weight: 600;
+}
+
+.modal-img {
+    width: auto;
+    height: auto;
+}
