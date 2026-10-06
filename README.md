@@ -1,8 +1,9 @@
 # Photography Website
 
 A simple photography portfolio I built to learn JavaScript and React. Photos are
-hosted on AWS S3 and served to the client through AWS Amplify (Cognito identity
-pool for unauthenticated read access).
+rendered by [`photo-sync/`](photo-sync/) into web sizes plus a `photos.json`
+manifest, stored on Backblaze B2 and served through Cloudflare. The site reads
+`photos.json` at runtime.
 
 **Live site:** https://joekraemer.github.io/photo-website/
 
@@ -11,8 +12,27 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 ## Tech stack
 
 - React 18 + React Router 6 (client-side routing)
-- AWS Amplify Storage (S3) for photo hosting
+- `photo-sync` (Python) + Backblaze B2 / Cloudflare for photo hosting
 - Create React App build tooling
+
+## Photos
+
+The build reads `REACT_APP_PHOTOS_BASE_URL`: the URL of the folder holding
+`photos.json`. When unset, the app loads `public/local-photos/` (gitignored),
+which is where `photo-sync` writes with `TARGET=local`.
+
+Local dev with sample photos:
+
+```bash
+cd photo-sync
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m photo_sync.sample_archive /tmp/sample-archive
+.venv/bin/python -m photo_sync --source /tmp/sample-archive --target local --local-dir ../public/local-photos
+cd .. && npm start
+```
+
+In CI the value comes from the repository variable `PHOTOS_BASE_URL`
+(Settings -> Secrets and variables -> Actions -> Variables).
 
 ## Available scripts
 
