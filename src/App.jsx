@@ -21,7 +21,7 @@ function App() {
   return (
     <>
       <div className='main__container'>
-        <Router>
+        <Router basename={process.env.PUBLIC_URL}>
           <Navbar />
           <div className="content__container">
             <Routes>
