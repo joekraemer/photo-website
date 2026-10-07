@@ -423,3 +423,18 @@ def test_slug_collision_warns(tmp_path):
     result = run_local(root, tmp_path / "out")
     assert sorted(a["slug"] for a in result.manifest["albums"]) == ["trip", "trip-2"]
     assert any("already used" in w for w in result.warnings)
+
+
+# --- hidden albums --------------------------------------------------------
+
+def test_hiding_album_deletes_its_objects_without_prune(src, out):
+    run_local(src, out)
+    greece_dir = out / "photos" / "2024-06-15-greece"
+    assert len(list(greece_dir.iterdir())) == 9
+    src.joinpath(*GREECE, "album.md").write_text("---\nhidden: true\n---\n")
+    result = run_local(src, out)  # no --prune
+    assert len(result.hidden_deleted) == 9
+    assert not greece_dir.exists()
+    assert "2024-06-15-greece" not in [a["slug"] for a in result.manifest["albums"]]
+    assert result.orphans == []
+    assert len(list((out / "photos").rglob("*.webp"))) == 9  # other albums untouched

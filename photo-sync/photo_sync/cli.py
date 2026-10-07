@@ -22,7 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--check", action="store_true",
                    help="report naming issues and counts; write and upload nothing")
     p.add_argument("--prune", action="store_true",
-                   help="delete orphaned objects under photos/ on the target")
+                   help="delete orphaned objects under photos/ on the target (objects of albums marked hidden are always deleted, with or without --prune)")
     p.add_argument("--env-file", type=Path, default=None,
                    help="env file to load (default: photo-sync/.env if present)")
     p.add_argument("--source", help="override PHOTO_SOURCE_ROOT")

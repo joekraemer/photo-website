@@ -33,6 +33,7 @@ class Result:
     manifest_written: bool = False
     orphans: list[str] = field(default_factory=list)
     deleted: list[str] = field(default_factory=list)
+    hidden_deleted: list[str] = field(default_factory=list)
     issues: list[archive.NamingIssue] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     # Per-file problems (unreadable JPEG, bad album.md). The run continues
@@ -113,6 +114,12 @@ def _strip_volatile(manifest: dict | None) -> dict | None:
     return {k: v for k, v in manifest.items() if k != "generated_at"}
 
 
+def _base_slug(shoot: archive.Shoot) -> str:
+    if shoot.conforming:
+        return f"{shoot.folder_date.isoformat()}-{archive.slugify(shoot.name)}"
+    return archive.slugify(shoot.folder.name)
+
+
 def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         log: Callable[[str], None] = print) -> Result:
     result = Result()
@@ -145,11 +152,13 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
     expected: set[str] = set()
     albums: list[dict] = []
     used_slugs: set[str] = set()
+    hidden_prefixes: list[str] = []
     fingerprint = render_fingerprint(cfg)
 
     for shoot in shoots:
         if shoot.meta.hidden:
             result.hidden_albums += 1
+            hidden_prefixes.append(f"{PHOTO_PREFIX}{_base_slug(shoot)}/")
             continue
         if shoot.meta_unreadable:
             continue  # already in result.errors
@@ -157,10 +166,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
             result.warnings.append(f"{shoot.rel}: _web/ has no JPEGs; skipped")
             continue
 
-        if shoot.conforming:
-            base_slug = f"{shoot.folder_date.isoformat()}-{archive.slugify(shoot.name)}"
-        else:
-            base_slug = archive.slugify(shoot.folder.name)
+        base_slug = _base_slug(shoot)
         slug, n = base_slug, 2
         while slug in used_slugs:
             slug, n = f"{base_slug}-{n}", n + 1
@@ -294,6 +300,19 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         result.manifest_written = True
     else:
         result.manifest = previous
+
+    # Hiding an album must take it off the bucket now, not at the next --prune:
+    # its keys are guessable (slug + 8 hex chars). Only keys no visible album
+    # uses are touched, so a visible album sharing the slug is safe.
+    hidden_keys = sorted(k for k in existing - expected
+                         if any(k.startswith(p) for p in hidden_prefixes))
+    if hidden_keys:
+        log(f"Deleting {len(hidden_keys)} objects of hidden albums")
+        for key in hidden_keys:
+            log(f"  - {key}")
+            target.delete(key)
+            result.hidden_deleted.append(key)
+        existing -= set(hidden_keys)
 
     result.orphans = sorted(existing - expected)
     if prune and result.errors and result.orphans:
