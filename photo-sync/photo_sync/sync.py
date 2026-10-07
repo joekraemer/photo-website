@@ -18,6 +18,8 @@ from .targets import MANIFEST_CACHE, PHOTO_CACHE
 MANIFEST_KEY = "photos.json"
 PHOTO_PREFIX = "photos/"
 MANIFEST_VERSION = 1
+# Bump when rendering code changes in a way that should re-render every photo.
+RENDER_VERSION = 1
 
 
 @dataclass
@@ -34,6 +36,27 @@ class Result:
     issues: list[archive.NamingIssue] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     manifest: dict | None = None
+
+
+def render_fingerprint(cfg) -> bytes:
+    """Every setting that changes the rendered bytes. Folded into object keys so a
+    change produces new keys (old ones become orphans) instead of being skipped or
+    served stale from an `immutable` cache."""
+    settings = {
+        "render_version": RENDER_VERSION,
+        "sizes": imaging.SIZES,
+        "webp_quality": imaging.WEBP_QUALITY,
+        "watermark_text": cfg.watermark_text,
+        "watermark_opacity": cfg.watermark_opacity,
+    }
+    return json.dumps(settings, sort_keys=True).encode("utf-8")
+
+
+def content_digest(raw: bytes, fingerprint: bytes) -> str:
+    h = hashlib.sha256(raw)
+    h.update(b"\0")
+    h.update(fingerprint)
+    return h.hexdigest()
 
 
 def photo_keys(album_slug: str, photo_slug: str, digest: str) -> dict[str, str]:
@@ -102,6 +125,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
     expected: set[str] = set()
     albums: list[dict] = []
     used_slugs: set[str] = set()
+    fingerprint = render_fingerprint(cfg)
 
     for shoot in shoots:
         if shoot.meta.hidden:
@@ -127,7 +151,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
 
         for src in shoot.photos:
             raw = src.read_bytes()
-            digest = hashlib.sha256(raw).hexdigest()
+            digest = content_digest(raw, fingerprint)
             photo_slug = archive.slugify(src.stem)
             keys = photo_keys(slug, photo_slug, digest)
             photo_id = f"{photo_slug}-{digest[:8]}"

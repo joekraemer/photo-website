@@ -320,3 +320,34 @@ def test_s3_target(src, monkeypatch):
     assert report.orphans == ["photos/old/stale-thumb.webp"]
     sync.run(cfg, target, prune=True, log=quiet)
     assert "photos/old/stale-thumb.webp" not in target.list_keys("photos/")
+
+
+# --- render settings in keys ------------------------------------------------
+
+@pytest.mark.parametrize("change", [
+    {"WATERMARK_TEXT": "@someone_else"},
+    {"WATERMARK_OPACITY": "0.7"},
+])
+def test_render_setting_change_rerenders(src, out, change):
+    run_local(src, out)
+    old = set(run_local(src, out).manifest["albums"][0]["photos"][0]["sizes"].values())
+    cfg = local_cfg(src, out, **change)
+    result = sync.run(cfg, LocalTarget(out), log=quiet)
+    assert result.uploaded_photos == 6 and result.skipped_photos == 0
+    new = set(result.manifest["albums"][0]["photos"][0]["sizes"].values())
+    assert new.isdisjoint(old)
+    assert old <= set(result.orphans)
+
+
+def test_render_version_and_quality_change_keys(src, out, monkeypatch):
+    cfg = local_cfg(src, out)
+    base = sync.render_fingerprint(cfg)
+    monkeypatch.setattr(sync, "RENDER_VERSION", sync.RENDER_VERSION + 1)
+    assert sync.render_fingerprint(cfg) != base
+    monkeypatch.undo()
+    monkeypatch.setattr(sync.imaging, "WEBP_QUALITY", 50)
+    assert sync.render_fingerprint(cfg) != base
+    monkeypatch.undo()
+    monkeypatch.setattr(sync.imaging, "SIZES", {"thumb": 400, "medium": 1600, "large": 2560})
+    assert sync.render_fingerprint(cfg) != base
+    assert sync.content_digest(b"x", base) != sync.content_digest(b"x", sync.render_fingerprint(cfg))
