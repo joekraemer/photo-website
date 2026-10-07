@@ -5,7 +5,14 @@ function HeroSection() {
     return (
         <div className='hero__section__container'>
             <figure className="hero__section__figure">
-                <img src={`${process.env.PUBLIC_URL}/photos/herophoto.png`} alt="Hero Section" className="hero__section__img" />
+                <img
+                    src={`${process.env.PUBLIC_URL}/photos/herophoto.webp`}
+                    alt="Joe Kraemer standing on a sand dune"
+                    className="hero__section__img"
+                    width="936"
+                    height="1111"
+                    fetchpriority="high"
+                />
             </figure>
             <p className="hero__section__text">
                 My name is <span className="bold-name">Joe Kraemer</span><br /><br />
