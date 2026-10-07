@@ -31,7 +31,7 @@
 }
 
 /* Small close button inside the white frame's top-right corner, clear of the photo. */
-.fa-times {
+.modal-button .fa-times {
     color: #555;
     font-size: 1rem;
 }
@@ -55,7 +55,8 @@
     border-radius: 0 0.5em 0 0.5em;
 }
 
-.modal-button:hover .fa-times {
+.modal-button:hover .fa-times,
+.modal-button:focus-visible .fa-times {
     color: #000;
 }
 
