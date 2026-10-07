@@ -36,6 +36,9 @@
 }
 
 .modal-button {
+    border: none;
+    font: inherit;
+    line-height: 0;
     position: absolute;
     top: 0.5em;
     right: 0.5em;

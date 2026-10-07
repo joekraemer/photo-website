@@ -12,7 +12,10 @@ function PhotosPage() {
             <h1>Photos</h1>
             {loading && <p className="status__text">Loading…</p>}
             {error && <p className="status__text">Photos are unavailable right now.</p>}
-            {manifest && (
+            {manifest && manifest.albums.length === 0 && (
+                <p className="status__text">No albums yet.</p>
+            )}
+            {manifest && manifest.albums.length > 0 && (
                 <div className="photo-card-container">
                     {manifest.albums.map((album) => (
                         <PhotoCard key={album.slug} album={album} />
