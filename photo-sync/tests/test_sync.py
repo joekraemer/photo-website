@@ -11,6 +11,8 @@ from photo_sync.cli import main
 from photo_sync.config import Config, ConfigError, load_env_file
 from photo_sync.imaging import format_shutter
 from photo_sync.sample_archive import build, make_jpeg
+from botocore.exceptions import ClientError
+
 from photo_sync.targets import LocalTarget, S3Target
 
 
@@ -466,6 +468,41 @@ def test_hiding_album_deletes_its_objects_without_prune(src, out):
     assert "2024-06-15-greece" not in [a["slug"] for a in result.manifest["albums"]]
     assert result.orphans == []
     assert len(list((out / "photos").rglob("*.webp"))) == 9  # other albums untouched
+
+
+@mock_aws
+def test_s3_read_missing_key_returns_none(monkeypatch):
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
+    client = boto3.client("s3", region_name="us-east-1",
+                          aws_access_key_id="x", aws_secret_access_key="y")
+    client.create_bucket(Bucket="photos-missing")
+    assert S3Target("photos-missing", client).read("photos.json") is None
+
+
+class _FakeClient:
+    """Raises a botocore ClientError with a given code, like providers that
+    answer a missing key with a plain 404 instead of NoSuchKey."""
+
+    class exceptions:
+        class NoSuchKey(Exception):
+            pass
+
+    def __init__(self, code):
+        self.code = code
+
+    def get_object(self, **_kw):
+        raise ClientError({"Error": {"Code": self.code, "Message": "x"}}, "GetObject")
+
+
+@pytest.mark.parametrize("code", ["404", "NoSuchKey", "NotFound"])
+def test_s3_read_404_variants_return_none(code):
+    assert S3Target("b", _FakeClient(code)).read("photos.json") is None
+
+
+@pytest.mark.parametrize("code", ["403", "AccessDenied", "InternalError"])
+def test_s3_read_other_errors_raise(code):
+    with pytest.raises(ClientError):
+        S3Target("b", _FakeClient(code)).read("photos.json")
 
 
 def test_s3_client_disables_default_checksums():
