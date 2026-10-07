@@ -1,15 +1,18 @@
+/* Up to four fixed-width columns, centred. auto-fit drops empty columns, so
+   three albums sit in the middle instead of leaving a blank fourth column. */
 .photo-card-container {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(180px, 226px));
+    justify-content: center;
     grid-gap: 3em 4.5em;
     margin: 0;
     width: 100%;
 }
 
-/* Media query for 2 columns on medium-sized screens */
+/* Two columns on medium-sized screens */
 @media (max-width: 960px) {
     .photo-card-container {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 300px));
         width: 100%;
     }
 }
