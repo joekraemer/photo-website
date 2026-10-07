@@ -32,6 +32,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check photo hosting variable
+        env:
+          PHOTOS_BASE_URL: ${{ vars.PHOTOS_BASE_URL }}
+        run: |
+          if [ -z "$PHOTOS_BASE_URL" ]; then
+            echo "::warning::PHOTOS_BASE_URL is not set; the site will show no photos"
+          fi
+
       - name: Build
         env:
           # CRA treats warnings as errors in CI by default; keep the build green on lint warnings.
