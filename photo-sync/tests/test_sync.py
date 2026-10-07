@@ -43,7 +43,13 @@ def run_local(src, out, **kw):
 
 @pytest.mark.parametrize("name,year,ok", [
     ("06-15-2024 Greece", 2024, True),
-    ("06-15-2024_Greece_Islands", 2024, True),
+    ("06-15-2024 Greece Islands", 2024, True),
+    ("06-15-2024_Greece_Islands", 2024, False),   # underscores
+    ("06-15-2024_Greece", 2024, False),
+    ("06-15-2024-Greece", 2024, False),
+    ("06-15-2024  Greece", 2024, False),       # two spaces
+    ("06-15-2024 Greece ", 2024, False),       # trailing space
+    ("06-15-2024 ", 2024, False),
     ("2024-06-15 Greece", 2024, False),       # wrong pattern
     ("Greece", 2024, False),
     ("02-30-2024 Leap", 2024, False),         # impossible date
@@ -66,6 +72,16 @@ def test_scan_flags_but_still_publishes(src, out):
     road = next(a for a in result.manifest["albums"] if a["slug"] == "road-trip")
     assert road["title"] == "Road trip"
     assert road["date"] == "2023-08-20"  # earliest EXIF DateTimeOriginal
+
+
+def test_underscore_separator_flagged_but_published(tmp_path):
+    root = tmp_path / "a"
+    make_jpeg(root / "2023" / "10-02-2023_South_Korea" / "_web" / "a.jpg", size=(300, 200))
+    _, issues = archive.scan(root)
+    assert [i.path for i in issues] == ["2023/10-02-2023_South_Korea"]
+    assert "single space" in issues[0].problem
+    result = run_local(root, tmp_path / "out")
+    assert [a["slug"] for a in result.manifest["albums"]] == ["10-02-2023-south-korea"]
 
 
 def test_year_mismatch_and_impossible_date_flagged(tmp_path):
@@ -252,7 +268,7 @@ def test_album_md_parsing(tmp_path):
 
 
 def test_album_md_order_pins_album(src, out):
-    (src / "2023" / "10-02-2023_South_Korea" / "album.md").write_text("---\norder: 1\n---\n")
+    (src / "2023" / "10-02-2023 South Korea" / "album.md").write_text("---\norder: 1\n---\n")
     m = run_local(src, out).manifest
     assert m["albums"][0]["slug"] == "2023-10-02-south-korea"
     assert m["albums"][0]["title"] == "South Korea"  # folder name fallback

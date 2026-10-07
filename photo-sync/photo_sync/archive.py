@@ -10,7 +10,10 @@ from pathlib import Path
 
 import yaml
 
-SHOOT_RE = re.compile(r"^(\d{2})-(\d{2})-(\d{4})[ _]+(\S.*)$")
+# Exactly "MM-DD-YYYY Name": one space after the date, non-empty name, no
+# leading/trailing whitespace. Underscores or other separators are flagged.
+SHOOT_RE = re.compile(r"^(\d{2})-(\d{2})-(\d{4}) (\S(?:.*\S)?)$")
+DATE_PREFIX_RE = re.compile(r"^\d{2}-\d{2}-\d{4}")
 YEAR_RE = re.compile(r"^\d{4}$")
 WEB_DIR = "_web"
 JPEG_SUFFIXES = {".jpg", ".jpeg"}
@@ -60,9 +63,11 @@ def parse_shoot_name(name: str, parent_year: int | None) -> tuple[date | None, s
     """Return (date, display_name, problems) for a shoot folder name."""
     m = SHOOT_RE.match(name)
     if not m:
+        if DATE_PREFIX_RE.match(name) and name[10:].strip(" _-"):
+            return None, None, ["name does not match 'MM-DD-YYYY Name' "
+                                "(use a single space after the date)"]
         return None, None, ["name does not match 'MM-DD-YYYY Name'"]
-    month, day, year, rest = (int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4))
-    display = re.sub(r"[ _]+", " ", rest).strip()
+    month, day, year, display = (int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4))
     try:
         d = date(year, month, day)
     except ValueError:

@@ -76,7 +76,7 @@ def build(root: Path) -> Path:
         encoding="utf-8",
     )
 
-    korea = root / "2023" / "10-02-2023_South_Korea"
+    korea = root / "2023" / "10-02-2023 South Korea"
     make_jpeg(korea / "_web" / "DSC00021.jpg", size=(1200, 800), color=(200, 60, 90),
               taken_at="2023:10:02 12:00:00", fnumber=4.0, focal=18.0, label="Korea 1")
     make_jpeg(korea / "_web" / "DSC00085.jpg", size=(800, 1200), color=(90, 60, 200),
