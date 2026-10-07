@@ -60,8 +60,14 @@ Safety for unattended runs, because the drive is often unplugged:
   disappears, or the album or photo count drops by more than 20%, it writes no
   manifest, prunes nothing, logs an `ERROR` and exits 1. Albums newly marked
   `hidden` in `album.md` don't count. For a deliberate cleanup, run once with
-  `PHOTO_ALLOW_SHRINK=1`. **The first real sync needs this**: it replaces the
-  3-album sample currently on B2.
+  `PHOTO_ALLOW_SHRINK=1`. The first real sync replaces the 3-album sample
+  currently on B2; run it normally, since the real archive is almost certainly
+  larger. Use the override only if that run logs the shrink `ERROR` and the
+  ERROR shows just the sample albums going away.
+- **Never compare blind.** If the published `photos.json` exists but can't be
+  read or parsed, the run is held the same way (`ERROR`, exit 1). If there is
+  no `photos.json` but photos are already on the target, the run publishes a
+  new manifest but deletes nothing.
 - **Keep the site on errors.** If any photo or `album.md` fails to read, the
   run still uploads the images it rendered but keeps the previous
   `photos.json`, so the failed photos don't vanish from the site.
