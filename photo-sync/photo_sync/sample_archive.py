@@ -8,7 +8,9 @@ the published files carry no metadata.
 
 from __future__ import annotations
 
+import os
 import sys
+import time
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -17,10 +19,25 @@ GPS_IFD = 0x8825
 EXIF_IFD = 0x8769
 
 
+def xmp_packet(rating: int, style: str = "attribute") -> bytes:
+    """A minimal Lightroom-style XMP packet carrying a star rating."""
+    if style == "attribute":
+        desc = f'<rdf:Description rdf:about="" xmp:Rating="{rating}"/>'
+    else:
+        desc = f'<rdf:Description rdf:about=""><xmp:Rating>{rating}</xmp:Rating></rdf:Description>'
+    return ('<?xpacket begin="\ufeff" id="W5M0MpCehiHzreSzNTczkc9d"?>'
+            '<x:xmpmeta xmlns:x="adobe:ns:meta/">'
+            '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" '
+            'xmlns:xmp="http://ns.adobe.com/xap/1.0/">'
+            f'{desc}</rdf:RDF></x:xmpmeta><?xpacket end="w"?>').encode("utf-8")
+
+
 def make_jpeg(path: Path, size=(3000, 2000), color=(70, 120, 180), *,
               taken_at="2024:06:15 10:00:00", model="ILCE-6400", make="SONY",
               lens="E 35mm F1.8 OSS", focal=35.0, fnumber=1.8, exposure=1 / 250,
-              iso=100, gps=True, orientation=1, description=None, label=None) -> Path:
+              iso=100, gps=True, orientation=1, description=None, label=None,
+              offset=None, export_time=None, rating=None, rating_style="attribute",
+              fmt="JPEG") -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     img = Image.new("RGB", size, color)
     draw = ImageDraw.Draw(img)
@@ -38,9 +55,13 @@ def make_jpeg(path: Path, size=(3000, 2000), color=(70, 120, 180), *,
     if description:
         exif[0x010E] = description
     exif[0x0112] = orientation
+    if export_time:
+        exif[0x0132] = export_time  # IFD0 DateTime: when Lightroom exported it
     sub = exif.get_ifd(EXIF_IFD)
     if taken_at:
         sub[0x9003] = taken_at
+    if offset:
+        sub[0x9011] = offset
     if lens:
         sub[0xA434] = lens
     if focal:
@@ -57,7 +78,11 @@ def make_jpeg(path: Path, size=(3000, 2000), color=(70, 120, 180), *,
         g[2] = (37.0, 58.0, 12.5)
         g[3] = "E"
         g[4] = (23.0, 43.0, 40.0)
-    img.save(path, "JPEG", quality=90, exif=exif.tobytes())
+    extra = {"xmp": xmp_packet(rating, rating_style)} if rating is not None else {}
+    if fmt == "JPEG":
+        img.save(path, "JPEG", quality=90, exif=exif.tobytes(), **extra)
+    else:
+        img.save(path, fmt, exif=exif.tobytes())
     return path
 
 
@@ -95,6 +120,12 @@ def build(root: Path) -> Path:
     no_web = root / "2022" / "04-01-2022 Unedited"
     (no_web / "a6400").mkdir(parents=True, exist_ok=True)
     (no_web / "a6400" / "DSC00001.dng").write_bytes(b"raw")
+    # Look like files exported a while ago, so the "still being written"
+    # guard (PHOTO_SETTLE_SECONDS) doesn't skip a freshly built sample.
+    past = time.time() - 3600
+    for p in root.rglob("*"):
+        if p.is_file():
+            os.utime(p, (past, past))
     return root
 
 

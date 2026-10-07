@@ -16,7 +16,13 @@ SHOOT_RE = re.compile(r"^(\d{2})-(\d{2})-(\d{4}) (\S(?:.*\S)?)$")
 DATE_PREFIX_RE = re.compile(r"^\d{2}-\d{2}-\d{4}")
 YEAR_RE = re.compile(r"^\d{4}$")
 WEB_DIR = "_web"
-JPEG_SUFFIXES = {".jpg", ".jpeg"}
+ALBUM_KEYS = frozenset({"title", "cover", "hidden", "order"})
+
+
+def name_key(name: str) -> str:
+    """Compare file names the way a person would: macOS stores names in NFD,
+    an album.md typed by hand is usually NFC, and case should not matter."""
+    return unicodedata.normalize("NFC", name).casefold()
 
 
 @dataclass
@@ -53,6 +59,18 @@ class AlbumMetaError(ValueError):
     """album.md could not be parsed; the album's settings (incl. hidden) are unknown."""
 
 
+class _FrontmatterLoader(yaml.SafeLoader):
+    """SafeLoader that leaves date-looking values as text. Stock YAML turns
+    `date: 2024-13-45` into a ValueError (not a YAMLError) that would crash
+    the whole run; no album.md field is a date anyway."""
+
+
+_FrontmatterLoader.yaml_implicit_resolvers = {
+    first: [(tag, rx) for tag, rx in resolvers if tag != "tag:yaml.org,2002:timestamp"]
+    for first, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+
+
 def slugify(text: str) -> str:
     text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
     text = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
@@ -79,8 +97,10 @@ def parse_shoot_name(name: str, parent_year: int | None) -> tuple[date | None, s
 
 def parse_album_md(path: Path, problems: list[str] | None = None) -> AlbumMeta:
     """Parse album.md. Raises AlbumMetaError when the file or its frontmatter is
-    unreadable. A field with the wrong type is ignored (default kept) and described
-    in `problems`; `hidden` with an unrecognised value is treated as hidden."""
+    unreadable (then even `hidden` is unknown). A mistake in one field (wrong
+    type, unknown key) only ignores that field, keeping its default, and is
+    described in `problems` so the caller can warn; `hidden` with an
+    unrecognised value is treated as hidden."""
     problems = [] if problems is None else problems
     try:
         text = path.read_text(encoding="utf-8")
@@ -93,13 +113,18 @@ def parse_album_md(path: Path, problems: list[str] | None = None) -> AlbumMeta:
         # parts: ["", frontmatter, body]
         if len(parts) == 3:
             try:
-                loaded = yaml.safe_load(parts[1]) or {}
-            except yaml.YAMLError as exc:
+                loaded = yaml.load(parts[1], Loader=_FrontmatterLoader) or {}
+            except (yaml.YAMLError, ValueError) as exc:
                 raise AlbumMetaError(f"album.md frontmatter is not valid YAML: {exc}") from exc
             if not isinstance(loaded, dict):
                 raise AlbumMetaError("album.md frontmatter must be a mapping of key: value")
             front = loaded
             body = parts[2]
+
+    for key in front:
+        if key not in ALBUM_KEYS:
+            problems.append(f"album.md has unknown key {str(key)!r} (known: "
+                            f"{', '.join(sorted(ALBUM_KEYS))}); ignored")
 
     def text_field(name: str) -> str | None:
         value = front.get(name)
@@ -131,11 +156,16 @@ def parse_album_md(path: Path, problems: list[str] | None = None) -> AlbumMeta:
     )
 
 
-def scan(root: Path, errors: list[str] | None = None) -> tuple[list[Shoot], list[NamingIssue]]:
+def scan(root: Path, errors: list[str] | None = None,
+         warnings: list[str] | None = None) -> tuple[list[Shoot], list[NamingIssue]]:
     """Find every shoot with a _web folder. Non-conforming shoots are still returned.
 
-    album.md problems are appended to `errors` as "<rel>: <problem>" strings."""
+    An album.md that cannot be read at all is appended to `errors`; a mistake
+    in one of its fields goes to `warnings`, both as "<rel>: <problem>".
+    Every non-hidden file in _web/ is returned as a photo candidate: the sync
+    decides whether it is an image it can render."""
     errors = [] if errors is None else errors
+    warnings = [] if warnings is None else warnings
     root = Path(root)
     if not root.is_dir():
         raise FileNotFoundError(f"PHOTO_SOURCE_ROOT does not exist: {root}")
@@ -156,8 +186,8 @@ def scan(root: Path, errors: list[str] | None = None) -> tuple[list[Shoot], list
             for problem in problems:
                 issues.append(NamingIssue(rel, problem))
             photos = sorted(
-                p for p in web.iterdir()
-                if p.is_file() and p.suffix.lower() in JPEG_SUFFIXES and not p.name.startswith(".")
+                (p for p in web.iterdir() if p.is_file() and not p.name.startswith(".")),
+                key=lambda p: name_key(p.name),
             )
             meta = AlbumMeta()
             unreadable = False
@@ -169,7 +199,7 @@ def scan(root: Path, errors: list[str] | None = None) -> tuple[list[Shoot], list
                 except AlbumMetaError as exc:
                     unreadable = True
                     errors.append(f"{rel}: {exc}; album not published until fixed")
-                errors.extend(f"{rel}: {p}" for p in problems_md)
+                warnings.extend(f"{rel}: {p}" for p in problems_md)
             shoots.append(Shoot(
                 folder=shoot_dir,
                 rel=rel,

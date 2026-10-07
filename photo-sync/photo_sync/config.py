@@ -8,6 +8,9 @@ from pathlib import Path
 
 DEFAULT_WATERMARK = "@jak_creative_"
 DEFAULT_OPACITY = 0.4
+# Files in _web/ changed less than this many seconds ago are skipped for this
+# run (Lightroom may still be writing them). PHOTO_SETTLE_SECONDS overrides.
+DEFAULT_SETTLE_SECONDS = 60
 
 
 class ConfigError(ValueError):
@@ -64,6 +67,7 @@ class Config:
     # Safety switches for unattended runs; see sync.SENTINEL / sync.shrink_reason.
     require_sentinel: bool = False
     allow_shrink: bool = False
+    settle_seconds: float = DEFAULT_SETTLE_SECONDS
 
     def __repr__(self) -> str:  # never leak secrets into logs or tracebacks
         return (
@@ -101,6 +105,13 @@ class Config:
         if not 0.0 <= opacity <= 1.0:
             raise ConfigError("WATERMARK_OPACITY must be between 0 and 1")
 
+        try:
+            settle = float(get("PHOTO_SETTLE_SECONDS", str(DEFAULT_SETTLE_SECONDS)))
+        except ValueError as exc:
+            raise ConfigError("PHOTO_SETTLE_SECONDS must be a number") from exc
+        if settle < 0:
+            raise ConfigError("PHOTO_SETTLE_SECONDS must not be negative")
+
         local_dir = get("LOCAL_TARGET_DIR")
         cfg = cls(
             source_root=Path(source).expanduser(),
@@ -115,6 +126,7 @@ class Config:
             watermark_opacity=opacity,
             require_sentinel=_flag(get("PHOTO_REQUIRE_SENTINEL")),
             allow_shrink=_flag(get("PHOTO_ALLOW_SHRINK")),
+            settle_seconds=settle,
         )
         if require_target:
             cfg.validate()

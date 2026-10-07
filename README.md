@@ -26,6 +26,32 @@ sets the title, cover, intro or `hidden: true`. The full design is in
 [issue #21](https://github.com/joekraemer/photo-website/issues/21), and the
 Lightroom setup is in [issue #22](https://github.com/joekraemer/photo-website/issues/22).
 
+What `photo-sync` does with each shoot:
+
+- **Files.** Every file in `_web/` that Pillow can read is published (JPEG,
+  PNG, TIFF, WebP...). A file it can't read is a warning (for example a stray
+  `.txt` or a `.heic`); a damaged file with an image extension is an error.
+  Large panoramas are fine: JPEGs up to 1 gigapixel are decoded at reduced
+  scale, other formats up to Pillow's ~179 MP limit.
+- **Half-written exports.** A file changed in the last 60 seconds
+  (`PHOTO_SETTLE_SECONDS`) is skipped, and `photos.json` waits for the next
+  run so nothing disappears from the site mid-export.
+- **Capture time** comes from EXIF `DateTimeOriginal`, with
+  `OffsetTimeOriginal` when the camera recorded it (`taken_at` then carries the
+  offset, e.g. `2024-06-15T09:00:00+03:00`). The export time is never used.
+- **Cover.** `cover:` in `album.md` wins; the name match ignores case and
+  accent encoding. Otherwise the highest-rated portrait photo (Lightroom star
+  rating, read from the export's XMP), then the highest-rated landscape one;
+  ties go to the earliest capture, unrated counts as 0.
+- **Camera name.** Each photo's `exif` keeps the raw model in `camera` (e.g.
+  `ILCE-6400`) and adds `body_name` (e.g. `Sony α6400`).
+- **Watermark** is drawn with the bundled TeX Gyre Heros font
+  (`photo-sync/photo_sync/fonts/`), so it looks the same on a Mac and in the
+  container.
+- **album.md mistakes.** A wrong value or unknown key in `album.md` is a
+  warning and that field is ignored. Only an `album.md` that can't be read at
+  all (broken YAML) is an error, and that album stays off the site until fixed.
+
 ## Photos
 
 The build reads `REACT_APP_PHOTOS_BASE_URL`: the URL of the folder holding
@@ -82,10 +108,16 @@ Safety for unattended runs, because the drive is often unplugged:
   new manifest but deletes nothing.
 - **Keep the site on errors.** If any photo or `album.md` fails to read, the
   run still uploads the images it rendered but keeps the previous
-  `photos.json`, so the failed photos don't vanish from the site.
+  `photos.json`, so the failed photos don't vanish from the site. Warnings
+  (an `album.md` typo, an unreadable non-image file) don't hold it back.
+- **One sync at a time.** A run takes an exclusive lock
+  (`$TMPDIR/photo-sync.lock`, or `PHOTO_LOCK_FILE`). A second run while one is
+  going prints that it is already in progress and exits 0 without changes.
+  `--check` doesn't take the lock.
 
 Settings: `PHOTO_SOURCE_ROOT`; `PHOTO_REQUIRE_SENTINEL` (on in the fleet
 entry point, off for the plain CLI); `PHOTO_ALLOW_SHRINK`;
+`PHOTO_SETTLE_SECONDS` (default 60); `PHOTO_LOCK_FILE`;
 `PHOTO_REQUIRE_MOUNT` / `PHOTO_MOUNT_POINT` for a mount-point check, which
 the fleet turns off: under Colima the USB drive is not a separate mount inside
 the container, so the check cannot tell plugged from unplugged.
