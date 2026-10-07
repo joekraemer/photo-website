@@ -349,13 +349,24 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
     }
     result.manifest = manifest
 
+    # The published manifest is what the shrink and error guards compare
+    # against. If it is there but can't be read or parsed, those guards would
+    # be blind, so the run is held instead of treated as a first sync.
     previous = None
-    prev_raw = target.read(MANIFEST_KEY)
-    if prev_raw:
+    manifest_problem = None
+    try:
+        prev_raw = target.read(MANIFEST_KEY)
+    except Exception as exc:  # noqa: BLE001 - permission, network, provider errors
+        prev_raw = None
+        manifest_problem = f"the published photos.json could not be read ({type(exc).__name__})"
+    if prev_raw is not None:
         try:
             previous = json.loads(prev_raw)
-        except ValueError:
+            if not isinstance(previous, dict) or not isinstance(previous.get("albums"), list):
+                raise ValueError("no 'albums' list")
+        except ValueError as exc:
             previous = None
+            manifest_problem = f"the published photos.json is not valid JSON ({exc})"
 
     # The drive may have gone away while rendering; publish nothing then.
     if reason := sentinel_missing(cfg):
@@ -365,7 +376,20 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         return result
 
     hold = None
-    if result.errors and previous is not None:
+    if previous is None and manifest_problem is None and existing and prune:
+        # No photos.json but photos/ objects exist: someone deleted the
+        # manifest, or a previous run died before writing it. There is nothing
+        # to compare against, so publish but don't delete anything this run.
+        log(f"WARNING: no published photos.json but {len(existing)} objects under "
+            f"{PHOTO_PREFIX}; not pruning this run.")
+        prune = False
+
+    if manifest_problem:
+        hold = "unreadable"
+        result.blocked = manifest_problem
+        log(f"ERROR: {manifest_problem}. photos.json was not updated and nothing was "
+            "pruned. Fix or delete the published photos.json, then re-run.")
+    elif result.errors and previous is not None:
         # Keep the published manifest rather than drop the photos that failed.
         hold = "errors"
         log("Not updating photos.json: fix the errors below first, so an unreadable "
@@ -393,6 +417,12 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
     # Hiding an album must take it off the bucket now, not at the next --prune:
     # its keys are guessable (slug + 8 hex chars). Only keys no visible album
     # uses are touched, so a visible album sharing the slug is safe.
+    #
+    # This runs even while photos.json is held back (errors, shrink, unreadable
+    # manifest). Then the published manifest still lists the hidden album and
+    # the site shows broken images for it until the hold clears. That is on
+    # purpose: hiding an album is a privacy decision, and taking its images
+    # offline now matters more than a tidy page in the meantime.
     hidden_keys = sorted(k for k in existing - expected
                          if any(k.startswith(p) for p in hidden_prefixes))
     if hidden_keys:

@@ -280,3 +280,62 @@ def test_errors_on_first_sync_still_publish(tmp_path):
     (src / "2024" / "06-15-2024 Greece" / "_web" / "broken.jpg").write_bytes(b"x")
     result = sync.run(_cfg(src, out), LocalTarget(out), log=lambda m: None)
     assert result.errors and result.manifest_written
+
+
+# --- the published manifest itself is damaged or gone ---------------------------
+
+@pytest.mark.parametrize("damage", [b"{broken", b"", b"[]", b'{"version": 1}'])
+def test_corrupt_manifest_holds_the_run(tmp_path, capsys, damage):
+    """Reviewer repro: corrupt photos.json + a year moved aside + --prune."""
+    src, out = build(tmp_path / "archive"), tmp_path / "out"
+    args = ["--source", str(src), "--target", "local", "--local-dir", str(out),
+            "--env-file", str(tmp_path / "none.env")]
+    assert cli.main(args) == 0
+    (out / "photos.json").write_bytes(damage)
+    shutil.move(src / "2024", tmp_path / "2024-moved-aside")
+    before = _snapshot(out)
+    capsys.readouterr()
+
+    assert cli.main(args + ["--prune"]) == 1
+    text = capsys.readouterr().out
+    assert "ERROR: the published photos.json is not valid JSON" in text
+    assert _snapshot(out) == before  # nothing pruned, damaged manifest untouched
+
+
+class _UnreadableManifest(LocalTarget):
+    def read(self, key):
+        if key == sync.MANIFEST_KEY:
+            raise PermissionError("denied")
+        return super().read(key)
+
+
+def test_unreadable_manifest_holds_the_run(tmp_path):
+    src, out = build(tmp_path / "archive"), tmp_path / "out"
+    sync.run(_cfg(src, out), LocalTarget(out), log=lambda m: None)
+    shutil.rmtree(src / "2024")
+    before = _snapshot(out)
+    result = sync.run(_cfg(src, out), _UnreadableManifest(out), log=lambda m: None, prune=True)
+    assert result.blocked and "could not be read (PermissionError)" in result.blocked
+    assert not result.manifest_written and not result.deleted
+    assert _snapshot(out) == before
+
+
+def test_missing_manifest_with_photos_disables_prune(tmp_path, capsys):
+    src, out = build(tmp_path / "archive"), tmp_path / "out"
+    sync.run(_cfg(src, out), LocalTarget(out), log=lambda m: None)
+    (out / "photos.json").unlink()
+    shutil.rmtree(src / "2024")
+    lines = []
+    result = sync.run(_cfg(src, out), LocalTarget(out), log=lines.append, prune=True)
+    assert any(line.startswith("WARNING: no published photos.json but") for line in lines)
+    assert result.orphans and not result.deleted
+    assert all((out / k).exists() for k in result.orphans)
+    assert result.manifest_written  # the site gets a manifest back
+
+
+def test_first_sync_into_empty_target_publishes(tmp_path):
+    src, out = build(tmp_path / "archive"), tmp_path / "out"
+    lines = []
+    result = sync.run(_cfg(src, out), LocalTarget(out), log=lines.append, prune=True)
+    assert result.manifest_written and result.blocked is None
+    assert not any("WARNING" in line for line in lines)
