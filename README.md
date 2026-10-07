@@ -2,7 +2,7 @@
 
 A simple photography portfolio I built to learn JavaScript and React. Photos are
 rendered by [`photo-sync/`](photo-sync/) into web sizes plus a `photos.json`
-manifest, and stored on Backblaze B2. The site reads
+manifest, stored on Backblaze B2. The site reads
 `photos.json` at runtime.
 
 **Live site:** https://joekraemer.github.io/photo-website/
@@ -54,7 +54,8 @@ steps are in [issue #20](https://github.com/joekraemer/photo-website/issues/20).
 `photo-sync` also ships as a container image, `ghcr.io/joekraemer/photo-sync:main`,
 built by `.github/workflows/photo-sync-image.yml` whenever `photo-sync/` changes
 on `main`. The homelab fleet ([joekraemer/fleet](https://github.com/joekraemer/fleet))
-runs it once a day through `photo-sync/loop.py`, with the archive drive mounted
+is set up to run it once a day
+([fleet PR #2](https://github.com/joekraemer/fleet/pull/2)) through `photo-sync/loop.py`, with the archive drive mounted
 read-only. The site needs no rebuild after a sync: it fetches `photos.json` from
 `PHOTOS_BASE_URL` at runtime (cached for at most 5 minutes).
 
