@@ -41,6 +41,13 @@ class Shoot:
     conforming: bool
     photos: list[Path] = field(default_factory=list)
     meta: AlbumMeta = field(default_factory=AlbumMeta)
+    # album.md could not be read at all, so whether the album is hidden is
+    # unknown. Such shoots are never published.
+    meta_unreadable: bool = False
+
+
+class AlbumMetaError(ValueError):
+    """album.md could not be parsed; the album's settings (incl. hidden) are unknown."""
 
 
 def slugify(text: str) -> str:
@@ -65,31 +72,65 @@ def parse_shoot_name(name: str, parent_year: int | None) -> tuple[date | None, s
     return d, display, []
 
 
-def parse_album_md(path: Path) -> AlbumMeta:
-    text = path.read_text(encoding="utf-8")
+def parse_album_md(path: Path, problems: list[str] | None = None) -> AlbumMeta:
+    """Parse album.md. Raises AlbumMetaError when the file or its frontmatter is
+    unreadable. A field with the wrong type is ignored (default kept) and described
+    in `problems`; `hidden` with an unrecognised value is treated as hidden."""
+    problems = [] if problems is None else problems
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise AlbumMetaError(f"album.md unreadable: {exc}") from exc
     front: dict = {}
     body = text
     if text.startswith("---"):
         parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.MULTILINE)
         # parts: ["", frontmatter, body]
         if len(parts) == 3:
-            loaded = yaml.safe_load(parts[1]) or {}
+            try:
+                loaded = yaml.safe_load(parts[1]) or {}
+            except yaml.YAMLError as exc:
+                raise AlbumMetaError(f"album.md frontmatter is not valid YAML: {exc}") from exc
             if not isinstance(loaded, dict):
-                raise ValueError(f"{path}: frontmatter must be a mapping")
+                raise AlbumMetaError("album.md frontmatter must be a mapping of key: value")
             front = loaded
             body = parts[2]
+
+    def text_field(name: str) -> str | None:
+        value = front.get(name)
+        if value is None or value == "":
+            return None
+        if isinstance(value, (dict, list)):
+            problems.append(f"album.md '{name}' must be text; ignored")
+            return None
+        return str(value).strip() or None
+
     order = front.get("order")
+    if order is not None and (isinstance(order, bool) or not isinstance(order, int)):
+        problems.append(f"album.md 'order' must be a whole number, got {order!r}; ignored")
+        order = None
+
+    hidden = front.get("hidden", False)
+    if hidden is None:
+        hidden = False
+    elif not isinstance(hidden, bool):
+        problems.append(f"album.md 'hidden' must be true or false, got {hidden!r}; treating as hidden")
+        hidden = True
+
     return AlbumMeta(
-        title=str(front["title"]).strip() if front.get("title") else None,
-        cover=str(front["cover"]).strip() if front.get("cover") else None,
-        hidden=bool(front.get("hidden", False)),
-        order=int(order) if order is not None else None,
+        title=text_field("title"),
+        cover=text_field("cover"),
+        hidden=hidden,
+        order=order,
         intro=body.strip(),
     )
 
 
-def scan(root: Path) -> tuple[list[Shoot], list[NamingIssue]]:
-    """Find every shoot with a _web folder. Non-conforming shoots are still returned."""
+def scan(root: Path, errors: list[str] | None = None) -> tuple[list[Shoot], list[NamingIssue]]:
+    """Find every shoot with a _web folder. Non-conforming shoots are still returned.
+
+    album.md problems are appended to `errors` as "<rel>: <problem>" strings."""
+    errors = [] if errors is None else errors
     root = Path(root)
     if not root.is_dir():
         raise FileNotFoundError(f"PHOTO_SOURCE_ROOT does not exist: {root}")
@@ -114,9 +155,16 @@ def scan(root: Path) -> tuple[list[Shoot], list[NamingIssue]]:
                 if p.is_file() and p.suffix.lower() in JPEG_SUFFIXES and not p.name.startswith(".")
             )
             meta = AlbumMeta()
+            unreadable = False
             md = shoot_dir / "album.md"
             if md.is_file():
-                meta = parse_album_md(md)
+                problems_md: list[str] = []
+                try:
+                    meta = parse_album_md(md, problems_md)
+                except AlbumMetaError as exc:
+                    unreadable = True
+                    errors.append(f"{rel}: {exc}; album not published until fixed")
+                errors.extend(f"{rel}: {p}" for p in problems_md)
             shoots.append(Shoot(
                 folder=shoot_dir,
                 rel=rel,
@@ -126,5 +174,6 @@ def scan(root: Path) -> tuple[list[Shoot], list[NamingIssue]]:
                 conforming=not problems,
                 photos=photos,
                 meta=meta,
+                meta_unreadable=unreadable,
             ))
     return shoots, issues

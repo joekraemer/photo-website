@@ -15,7 +15,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="python -m photo_sync",
         description="Render <ROOT>/<YEAR>/<MM-DD-YYYY Name>/_web/*.jpg into web sizes "
-                    "and publish them plus photos.json to a local folder or B2.",
+                    "and publish them plus photos.json to a local folder or B2. "
+                    "A bad file (unreadable JPEG, broken album.md) is skipped and reported; "
+                    "the rest still publishes and the exit code is 1.",
     )
     p.add_argument("--check", action="store_true",
                    help="report naming issues and counts; write and upload nothing")
@@ -43,12 +45,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         if args.check:
-            sync.run(cfg, None, check=True)
+            result = sync.run(cfg, None, check=True)
         else:
             target = make_target(cfg)
             print(f"Syncing {cfg.source_root} -> {target.describe()}")
-            sync.run(cfg, target, prune=args.prune)
+            result = sync.run(cfg, target, prune=args.prune)
     except FileNotFoundError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
-    return 0
+    return 1 if result.errors else 0

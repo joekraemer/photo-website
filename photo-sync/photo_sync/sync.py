@@ -35,6 +35,9 @@ class Result:
     deleted: list[str] = field(default_factory=list)
     issues: list[archive.NamingIssue] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # Per-file problems (unreadable JPEG, bad album.md). The run continues
+    # without the affected photo/album; the CLI exits non-zero.
+    errors: list[str] = field(default_factory=list)
     manifest: dict | None = None
 
 
@@ -96,6 +99,14 @@ def format_issues(issues: list[archive.NamingIssue]) -> str:
     return "\n".join(lines)
 
 
+def format_errors(errors: list[str]) -> str:
+    lines = ["Errors:"]
+    if not errors:
+        lines.append("  none")
+    lines.extend(f"  - {e}" for e in errors)
+    return "\n".join(lines)
+
+
 def _strip_volatile(manifest: dict | None) -> dict | None:
     if manifest is None:
         return None
@@ -105,17 +116,26 @@ def _strip_volatile(manifest: dict | None) -> dict | None:
 def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         log: Callable[[str], None] = print) -> Result:
     result = Result()
-    shoots, issues = archive.scan(cfg.source_root)
+    shoots, issues = archive.scan(cfg.source_root, result.errors)
     result.issues = issues
     log(format_issues(issues))
 
     if check:
-        visible = [s for s in shoots if not s.meta.hidden]
+        visible = [s for s in shoots if not s.meta.hidden and not s.meta_unreadable]
         result.albums = len(visible)
-        result.hidden_albums = len(shoots) - len(visible)
-        result.photos = sum(len(s.photos) for s in visible)
+        result.hidden_albums = sum(1 for s in shoots if s.meta.hidden)
+        for shoot in visible:
+            for src in shoot.photos:
+                try:
+                    with Image.open(src) as img:
+                        img.verify()
+                    result.photos += 1
+                except Exception as exc:  # noqa: BLE001 - any decode failure is a per-file error
+                    result.errors.append(f"{shoot.rel}/_web/{src.name}: unreadable image ({exc})")
+        log(format_errors(result.errors))
         log(f"Check: {result.albums} albums, {result.hidden_albums} hidden, "
-            f"{result.photos} photos, {len(issues)} naming issues. No changes made.")
+            f"{result.photos} photos, {len(issues)} naming issues, "
+            f"{len(result.errors)} errors. No changes made.")
         return result
 
     if target is None:
@@ -131,6 +151,8 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         if shoot.meta.hidden:
             result.hidden_albums += 1
             continue
+        if shoot.meta_unreadable:
+            continue  # already in result.errors
         if not shoot.photos:
             result.warnings.append(f"{shoot.rel}: _web/ has no JPEGs; skipped")
             continue
@@ -143,6 +165,9 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         while slug in used_slugs:
             slug, n = f"{base_slug}-{n}", n + 1
         used_slugs.add(slug)
+        if slug != base_slug:
+            result.warnings.append(
+                f"{shoot.rel}: slug '{base_slug}' already used by another album; published as '{slug}'")
 
         title = shoot.meta.title or shoot.name
         photos: list[dict] = []
@@ -159,29 +184,41 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
                 result.warnings.append(f"{shoot.rel}/_web/{src.name}: duplicate of another export; skipped")
                 continue
             seen_ids.add(photo_id)
+
+            reuse = all(k in existing for k in keys.values())
+            try:
+                if reuse:
+                    # Lazy open: EXIF and size come from the header, no full decode.
+                    img = Image.open(io.BytesIO(raw))
+                else:
+                    img = imaging.load_source(io.BytesIO(raw))
+                exif = imaging.read_exif(img)
+                description = imaging.read_description(img)
+                if reuse:
+                    width, height = fit_size(*_oriented_size(img), imaging.SIZES["large"])
+                    rendered = None
+                else:
+                    base = imaging.prepare(img)
+                    rendered = {}
+                    for size, edge in imaging.SIZES.items():
+                        is_large = size == "large"
+                        rendered[size] = imaging.render(
+                            base, edge,
+                            wm_text=cfg.watermark_text if is_large else None,
+                            wm_opacity=cfg.watermark_opacity,
+                        )
+                    width, height = rendered["large"].width, rendered["large"].height
+            except Exception as exc:  # noqa: BLE001 - any decode/render failure skips just this photo
+                result.errors.append(f"{shoot.rel}/_web/{src.name}: unreadable image ({exc}); skipped")
+                continue
+
             expected.update(keys.values())
-
-            img = imaging.load_source(io.BytesIO(raw))
-            exif = imaging.read_exif(img)
-            description = imaging.read_description(img)
-
-            if all(k in existing for k in keys.values()):
-                width, height = fit_size(*_oriented_size(img), imaging.SIZES["large"])
+            if rendered is None:
                 result.skipped_photos += 1
             else:
-                base = imaging.prepare(img)
-                width = height = 0
-                for size, edge in imaging.SIZES.items():
-                    is_large = size == "large"
-                    out = imaging.render(
-                        base, edge,
-                        wm_text=cfg.watermark_text if is_large else None,
-                        wm_opacity=cfg.watermark_opacity,
-                    )
+                for size, out in rendered.items():
                     target.put(keys[size], out.data, "image/webp", PHOTO_CACHE)
                     result.uploaded_objects += 1
-                    if is_large:
-                        width, height = out.width, out.height
                 result.uploaded_photos += 1
                 log(f"  + {shoot.rel}/_web/{src.name}")
 
@@ -259,6 +296,10 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         result.manifest = previous
 
     result.orphans = sorted(existing - expected)
+    if prune and result.errors and result.orphans:
+        log("Not pruning: fix the errors below first, so a temporarily unreadable "
+            "file does not delete its published copies.")
+        prune = False
     if result.orphans:
         verb = "Deleting" if prune else "Orphaned (run with --prune to delete)"
         log(f"{verb}: {len(result.orphans)} objects")
@@ -270,9 +311,12 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
 
     for warning in result.warnings:
         log(f"Warning: {warning}")
+    if result.errors:
+        log(format_errors(result.errors))
     log(f"Done: {result.albums} albums, {result.photos} photos, "
         f"{result.uploaded_photos} rendered, {result.skipped_photos} unchanged, "
         f"{result.uploaded_objects} objects written, manifest "
         f"{'updated' if result.manifest_written else 'unchanged'}, "
-        f"{len(result.orphans)} orphans{' deleted' if prune and result.orphans else ''}.")
+        f"{len(result.orphans)} orphans{' deleted' if prune and result.orphans else ''}, "
+        f"{len(result.errors)} errors.")
     return result

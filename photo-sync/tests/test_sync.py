@@ -351,3 +351,75 @@ def test_render_version_and_quality_change_keys(src, out, monkeypatch):
     monkeypatch.setattr(sync.imaging, "SIZES", {"thumb": 400, "medium": 1600, "large": 2560})
     assert sync.render_fingerprint(cfg) != base
     assert sync.content_digest(b"x", base) != sync.content_digest(b"x", sync.render_fingerprint(cfg))
+
+
+# --- per-file error isolation ---------------------------------------------
+
+GREECE = ("2024", "06-15-2024 Greece")
+
+
+def test_corrupt_jpeg_skipped_rest_published(src, out, capsys):
+    (src.joinpath(*GREECE, "_web", "broken.jpg")).write_bytes(b"\xff\xd8\xff not really a jpeg")
+    result = run_local(src, out)
+    assert result.photos == 6 and result.manifest_written
+    assert any("broken.jpg" in e for e in result.errors)
+    assert "broken" not in json.dumps(result.manifest)
+
+    rc = main(["--source", str(src), "--target", "local", "--local-dir", str(out),
+               "--env-file", str(src / "none.env")])
+    assert rc == 1
+    assert (out / "photos.json").exists()
+
+    rc = main(["--check", "--source", str(src), "--env-file", str(src / "none.env")])
+    text = capsys.readouterr().out
+    assert rc == 1 and "broken.jpg" in text and "1 errors" in text
+
+
+def test_errors_block_prune(src, out):
+    run_local(src, out)
+    victim = src.joinpath(*GREECE, "_web", "DSC04351.jpg")
+    victim.write_bytes(b"truncated")
+    result = run_local(src, out, prune=True)
+    assert result.orphans and not result.deleted
+    assert all((out / k).exists() for k in result.orphans)
+
+
+def test_malformed_album_md_yaml(src, out, capsys):
+    md = src.joinpath(*GREECE, "album.md")
+    md.write_text("---\ntitle: [unclosed\n---\nintro\n")
+    result = run_local(src, out)
+    assert any("not valid YAML" in e for e in result.errors)
+    slugs = [a["slug"] for a in result.manifest["albums"]]
+    assert "2024-06-15-greece" not in slugs  # hidden state unknown: not published
+    assert len(slugs) == 2
+    rc = main(["--check", "--source", str(src), "--env-file", str(src / "none.env")])
+    assert rc == 1 and "not valid YAML" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("front,err,check", [
+    ("order: first", "'order' must be a whole number", lambda a: "order" not in a),
+    ("title: [a, b]", "'title' must be text", lambda a: a["title"] == "Greece"),
+])
+def test_bad_album_md_field_types(src, out, front, err, check):
+    src.joinpath(*GREECE, "album.md").write_text(f"---\n{front}\n---\nHi.\n")
+    result = run_local(src, out)
+    assert any(err in e for e in result.errors)
+    greece = next(a for a in result.manifest["albums"] if a["slug"] == "2024-06-15-greece")
+    assert check(greece) and greece["intro"] == "Hi."
+
+
+def test_bad_hidden_value_treated_as_hidden(tmp_path):
+    md = tmp_path / "album.md"
+    md.write_text("---\nhidden: maybe\n---\n")
+    problems = []
+    assert archive.parse_album_md(md, problems).hidden is True
+    assert problems and "hidden" in problems[0]
+
+
+def test_slug_collision_warns(tmp_path):
+    root = tmp_path / "a"
+    make_jpeg(root / "2024" / "Trip" / "_web" / "a.jpg", size=(300, 200))
+    make_jpeg(root / "2024" / "trip!" / "_web" / "b.jpg", size=(300, 200))
+    result = run_local(root, tmp_path / "out")
+    assert sorted(a["slug"] for a in result.manifest["albums"]) == ["trip", "trip-2"]
+    assert any("already used" in w for w in result.warnings)
