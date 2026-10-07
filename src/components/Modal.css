@@ -77,3 +77,24 @@
     width: auto;
     height: auto;
 }
+
+/* Phones: a thinner white frame so the photo gets most of the screen. The top
+   keeps room for the close button; the caption stays inside the frame. */
+@media (max-width: 730px) {
+    .modal-content {
+        padding: 2em 0.5em 0.75em;
+    }
+
+    .modal-img {
+        max-width: calc(100vw - 2.5em);
+        max-height: 80vh;
+    }
+
+    /* Wrap the caption to the photo's width instead of letting a long EXIF
+       line stretch the frame to the screen edges. */
+    .exif__data {
+        margin: 0.5em 0 0;
+        width: 0;
+        min-width: 100%;
+    }
+}
