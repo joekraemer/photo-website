@@ -47,7 +47,7 @@ jobs:
         env:
           # CRA treats warnings as errors in CI by default; keep the build green on lint warnings.
           CI: false
-          # Where photos.json lives (Cloudflare in front of B2). Set under
+          # Where photos.json lives (the public B2 bucket's S3-style URL). Set under
           # Settings -> Secrets and variables -> Actions -> Variables.
           REACT_APP_PHOTOS_BASE_URL: ${{ vars.PHOTOS_BASE_URL }}
         run: npm run build
