@@ -2,7 +2,7 @@
 
 A simple photography portfolio I built to learn JavaScript and React. Photos are
 rendered by [`photo-sync/`](photo-sync/) into web sizes plus a `photos.json`
-manifest, stored on Backblaze B2 and served through Cloudflare. The site reads
+manifest, and stored on Backblaze B2. The site reads
 `photos.json` at runtime.
 
 **Live site:** https://joekraemer.github.io/photo-website/
@@ -12,8 +12,19 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 ## Tech stack
 
 - React 18 + React Router 6 (client-side routing)
-- `photo-sync` (Python) + Backblaze B2 / Cloudflare for photo hosting
+- `photo-sync` (Python) + Backblaze B2 for photo hosting
 - Create React App build tooling
+
+## Adding photos
+
+Whatever is in a shoot's `_web/` folder is on the site. The archive is laid
+out as `<YEAR>/MM-DD-YYYY <Name>/`. Lightroom exports the photos rated 3 stars or
+more into that shoot's `_web/` subfolder. `photo-sync` then renders three
+sizes (the large one watermarked), reads the camera settings and uploads
+everything with a new `photos.json`. An optional `album.md` in the shoot folder
+sets the title, cover, intro or `hidden: true`. The full design is in
+[issue #21](https://github.com/joekraemer/photo-website/issues/21), and the
+Lightroom setup is in [issue #22](https://github.com/joekraemer/photo-website/issues/22).
 
 ## Photos
 
@@ -43,7 +54,7 @@ steps are in [issue #20](https://github.com/joekraemer/photo-website/issues/20).
 `photo-sync` also ships as a container image, `ghcr.io/joekraemer/photo-sync:main`,
 built by `.github/workflows/photo-sync-image.yml` whenever `photo-sync/` changes
 on `main`. The homelab fleet ([joekraemer/fleet](https://github.com/joekraemer/fleet))
-runs it every 6 hours through `photo-sync/loop.py`, with the archive drive mounted
+runs it once a day through `photo-sync/loop.py`, with the archive drive mounted
 read-only. The site needs no rebuild after a sync: it fetches `photos.json` from
 `PHOTOS_BASE_URL` at runtime (cached for at most 5 minutes).
 
