@@ -34,6 +34,10 @@ cd .. && npm start
 In CI the value comes from the repository variable `PHOTOS_BASE_URL`
 (Settings -> Secrets and variables -> Actions -> Variables).
 
+The bucket behind `PHOTOS_BASE_URL` needs a CORS rule that allows `GET` from
+`https://joekraemer.github.io`, or the site cannot fetch `photos.json`. Setup
+steps are in [issue #20](https://github.com/joekraemer/photo-website/issues/20).
+
 ## Available scripts
 
 ### `npm start`
