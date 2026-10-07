@@ -1,17 +1,19 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
 import '../../App.css'
 import './Contact.css'
+import { EMAIL, INSTAGRAM_URL } from '../Footer'
+import useDocumentTitle from '../../hooks/useDocumentTitle'
 
 function Contact() {
+    useDocumentTitle('Contact')
     return (
         <>
             <div className='contact__container'>
                 <ol className='list'>
-                    <p>Email: jkraemer9@gmail.com</p>
-                    <Link to="https://www.instagram.com/jak_creative_/" className="ig__link">
-                        <i className='fa fa-instagram' id='instagram-logo' />   @jak_creative_
-                    </Link>
+                    <p>Email: <a href={`mailto:${EMAIL}`} className="email__link">{EMAIL}</a></p>
+                    <a href={INSTAGRAM_URL} className="ig__link" target="_blank" rel="noopener noreferrer">
+                        <i className='fa fa-instagram' id='instagram-logo' aria-hidden="true" />   @jak_creative_
+                    </a>
                 </ol>
                 <div className='text'>
                     <p>Contact me if you want to collaborate, purchase a high resolution print or just say "Hi"!</p>

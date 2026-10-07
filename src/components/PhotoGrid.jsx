@@ -11,12 +11,11 @@ function PhotoGrid({ photos, variant = 'thumb' }) {
     let horizontal = [];
 
     photos.forEach((photo) => {
-        const cell = <Photo key={photo.id} photo={photo} variant={variant} />;
         if ((photo.aspect || 1) < 1) {
-            vertical.push(cell);
+            vertical.push(photo);
             if (vertical.length === 3) { verticalRows.push(vertical); vertical = []; }
         } else {
-            horizontal.push(cell);
+            horizontal.push(photo);
             if (horizontal.length === 2) { horizontalRows.push(horizontal); horizontal = []; }
         }
     });
@@ -34,7 +33,9 @@ function PhotoGrid({ photos, variant = 'thumb' }) {
         <div className="photo-grid">
             {rows.map((row, index) => (
                 <div className="photo-row" key={index}>
-                    {row}
+                    {row.map((photo) => (
+                        <Photo key={photo.id} photo={photo} variant={variant} perRow={row.length} />
+                    ))}
                 </div>
             ))}
         </div>

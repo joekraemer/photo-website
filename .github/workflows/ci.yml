@@ -1,0 +1,33 @@
+name: Site CI
+
+# Build and test the React site on every pull request so a broken build is
+# caught before it reaches main (where deploy.yml publishes it).
+on:
+  pull_request:
+    paths-ignore: ["photo-sync/**", ".github/workflows/photo-sync-image.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test -- --watchAll=false
+
+      # CI=true (the Actions default) makes CRA fail the build on lint warnings.
+      - name: Build
+        run: npm run build

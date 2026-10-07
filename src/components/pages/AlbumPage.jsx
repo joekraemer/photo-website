@@ -5,15 +5,17 @@ import './PhotosPage.css';
 import PhotoGrid from '../PhotoGrid';
 import useManifest from '../../services/useManifest';
 import { formatAlbumDate } from '../../services/photoService';
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 
 function AlbumPage() {
     const { slug } = useParams();
     const { manifest, error, loading } = useManifest();
+    const album = manifest ? manifest.albums.find((a) => a.slug === slug) : null;
+    useDocumentTitle(album ? album.title : manifest ? 'Album not found' : 'Photos');
 
     if (loading) return <p className="status__text">Loading…</p>;
     if (error) return <p className="status__text">Photos are unavailable right now.</p>;
 
-    const album = manifest.albums.find((a) => a.slug === slug);
     if (!album) {
         return (
             <>

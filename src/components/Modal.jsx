@@ -5,6 +5,7 @@ import './Modal.css';
 // Full-screen lightbox: the watermarked large size plus its EXIF.
 function Modal({ photo, onClose }) {
     const closeRef = useRef(null);
+    const dialogRef = useRef(null);
 
     // Move focus into the dialog and give it back to the opener on close.
     useEffect(() => {
@@ -13,8 +14,26 @@ function Modal({ photo, onClose }) {
         return () => { if (opener && opener.focus) opener.focus(); };
     }, []);
 
+    // Escape closes; Tab and Shift+Tab stay inside the dialog.
     useEffect(() => {
-        const onKey = (event) => { if (event.key === 'Escape') onClose(); };
+        const onKey = (event) => {
+            if (event.key === 'Escape') { onClose(); return; }
+            if (event.key !== 'Tab' || !dialogRef.current) return;
+            const focusable = dialogRef.current.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            if (focusable.length === 0) { event.preventDefault(); return; }
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const inside = dialogRef.current.contains(document.activeElement);
+            if (event.shiftKey && (document.activeElement === first || !inside)) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && (document.activeElement === last || !inside)) {
+                event.preventDefault();
+                first.focus();
+            }
+        };
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
     }, [onClose]);
@@ -24,6 +43,7 @@ function Modal({ photo, onClose }) {
     return (
         <div
             className="modal"
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label={photo.alt}

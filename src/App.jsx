@@ -7,12 +7,15 @@ import Home from './components/pages/Home';
 import PhotosPage from './components/pages/PhotosPage';
 import Contact from './components/pages/Contact';
 import AlbumPage from './components/pages/AlbumPage';
+import { NotFound, Videos } from './components/pages/MessagePage';
 import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
     <div className="main__container">
       <Router basename={process.env.PUBLIC_URL}>
+        <ScrollToTop />
         <Navbar />
         <div className="content__container">
           <Routes>
@@ -20,7 +23,9 @@ function App() {
             <Route path="/photos" element={<PhotosPage />} />
             {/* Albums come from photos.json */}
             <Route path="/photos/:slug" element={<AlbumPage />} />
+            <Route path="/videos" element={<Videos />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
         <Footer />

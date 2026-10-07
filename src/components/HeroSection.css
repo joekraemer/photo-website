@@ -18,8 +18,9 @@
 }
 
 .hero__section__img {
-    max-height: 100%;
     width: 100%;
+    /* width/height attributes reserve the space; keep the drawn size proportional. */
+    height: auto;
     max-height: 50vh;
     margin: 0em;
     padding: 0em;
