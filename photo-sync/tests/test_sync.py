@@ -185,7 +185,8 @@ def test_exif_fields_and_omissions(src, out):
     m = json.loads((out / "photos.json").read_text())
     by_id = {p["id"].rsplit("-", 1)[0]: p for a in m["albums"] for p in a["photos"]}
     assert by_id["dsc04351"]["exif"] == {
-        "camera": "ILCE-6400", "lens": "E 35mm F1.8 OSS", "focal_length": "35mm",
+        "camera": "ILCE-6400", "body_name": "Sony α6400", "lens": "E 35mm F1.8 OSS",
+        "focal_length": "35mm",
         "aperture": "f/1.8", "shutter": "1/250s", "iso": 100, "taken_at": "2024-06-15T09:00:00",
     }
     assert by_id["dsc04639"]["exif"]["shutter"] == "2.5s"
@@ -270,6 +271,10 @@ def test_album_md_parsing(tmp_path):
     meta = archive.parse_album_md(md)
     assert meta.title is None and meta.intro == "Just an intro, no frontmatter." and not meta.hidden
 
+    # Date-looking values stay text (and an impossible date doesn't crash).
+    md.write_text("---\ntitle: 2024-13-45\n---\n")
+    assert archive.parse_album_md(md).title == "2024-13-45"
+
 
 def test_album_md_order_pins_album(src, out):
     (src / "2023" / "10-02-2023 South Korea" / "album.md").write_text("---\norder: 1\n---\n")
@@ -282,8 +287,10 @@ def test_missing_cover_warns(src, out):
     (src / "2024" / "06-15-2024 Greece" / "album.md").write_text("---\ncover: nope.jpg\n---\n")
     result = run_local(src, out)
     greece = result.manifest["albums"][0]
-    assert greece["cover"] == greece["photos"][0]["id"]
-    assert any("nope.jpg" in w for w in result.warnings)
+    portrait = next(p for p in greece["photos"] if p["height"] > p["width"])
+    assert greece["cover"] == portrait["id"]  # automatic pick, not the named file
+    assert any("nope.jpg" in w and "automatically" in w for w in result.warnings)
+    assert not result.errors
 
 
 # --- config ---------------------------------------------------------------
@@ -431,13 +438,47 @@ def test_malformed_album_md_yaml(src, out, capsys):
 @pytest.mark.parametrize("front,err,check", [
     ("order: first", "'order' must be a whole number", lambda a: "order" not in a),
     ("title: [a, b]", "'title' must be text", lambda a: a["title"] == "Greece"),
+    ("titel: Cyclades", "unknown key 'titel'", lambda a: a["title"] == "Greece"),
+    ("date: 2024-13-45", "unknown key 'date'", lambda a: a["date"] == "2024-06-15"),
+    ("cover: [x.jpg]", "'cover' must be text", lambda a: a["cover"].startswith("dsc04639-")),
 ])
 def test_bad_album_md_field_types(src, out, front, err, check):
     src.joinpath(*GREECE, "album.md").write_text(f"---\n{front}\n---\nHi.\n")
     result = run_local(src, out)
-    assert any(err in e for e in result.errors)
+    assert any(err in w for w in result.warnings)
+    assert not result.errors
     greece = next(a for a in result.manifest["albums"] if a["slug"] == "2024-06-15-greece")
     assert check(greece) and greece["intro"] == "Hi."
+
+
+def test_album_md_field_mistake_does_not_freeze_the_site(src, out, capsys):
+    """Regression: a typo in an optional album.md field used to be an error,
+    and any error holds photos.json back, so every later sync kept the old
+    manifest and new photos never appeared."""
+    run_local(src, out)
+    src.joinpath(*GREECE, "album.md").write_text("---\ntitle: Greece\norder: first\n---\n")
+    make_jpeg(src.joinpath(*GREECE, "_web", "NEW.jpg"), size=(800, 600), taken_at="2024:06:15 20:00:00")
+    result = run_local(src, out)
+    assert result.manifest_written and not result.errors and not result.blocked
+    published = json.loads((out / "photos.json").read_text())
+    assert any(p["id"].startswith("new-") for a in published["albums"] for p in a["photos"])
+    rc = main(["--source", str(src), "--target", "local", "--local-dir", str(out),
+               "--env-file", str(src / "none.env")])
+    assert rc == 0 and "'order' must be a whole number" in capsys.readouterr().out
+    rc = main(["--check", "--source", str(src), "--env-file", str(src / "none.env")])
+    text = capsys.readouterr().out
+    assert rc == 0 and "'order' must be a whole number" in text and "0 errors" in text
+
+
+@pytest.mark.parametrize("content", [
+    "---\ntitle: [unclosed\n---\n",   # YAML broken: hidden unknown
+    "---\n- a\n- b\n---\n",           # not a mapping
+])
+def test_unusable_album_md_still_errors(src, out, content):
+    src.joinpath(*GREECE, "album.md").write_text(content)
+    result = run_local(src, out)
+    assert result.errors
+    assert "2024-06-15-greece" not in [a["slug"] for a in result.manifest["albums"]]
 
 
 def test_bad_hidden_value_treated_as_hidden(tmp_path):

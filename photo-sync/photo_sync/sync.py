@@ -5,12 +5,12 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-import math
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Callable
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from . import archive, imaging
 from .targets import MANIFEST_CACHE, PHOTO_CACHE
@@ -19,7 +19,8 @@ MANIFEST_KEY = "photos.json"
 PHOTO_PREFIX = "photos/"
 MANIFEST_VERSION = 1
 # Bump when rendering code changes in a way that should re-render every photo.
-RENDER_VERSION = 1
+# 2: decode-time downscale before the resize (large-photo memory fix).
+RENDER_VERSION = 2
 # A file at the archive root that proves the real drive is there (not an empty
 # mount point or a half-unmounted volume). Checked before and after the scan
 # when cfg.require_sentinel is set (the fleet entry point sets it).
@@ -44,6 +45,9 @@ class Result:
     hidden_deleted: list[str] = field(default_factory=list)
     issues: list[archive.NamingIssue] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # Files skipped because they changed seconds ago (still being exported).
+    # They hold back photos.json for this run without being errors.
+    fresh: list[str] = field(default_factory=list)
     # Per-file problems (unreadable JPEG, bad album.md). The run continues
     # without the affected photo/album; the CLI exits non-zero.
     errors: list[str] = field(default_factory=list)
@@ -65,6 +69,7 @@ def render_fingerprint(cfg) -> bytes:
         "webp_quality": imaging.WEBP_QUALITY,
         "watermark_text": cfg.watermark_text,
         "watermark_opacity": cfg.watermark_opacity,
+        "watermark_font_sha256": imaging.font_digest(),
     }
     return json.dumps(settings, sort_keys=True).encode("utf-8")
 
@@ -81,27 +86,61 @@ def photo_keys(album_slug: str, photo_slug: str, digest: str) -> dict[str, str]:
     return {size: f"{stem}-{size}.webp" for size in imaging.SIZES}
 
 
-def fit_size(width: int, height: int, long_edge: int) -> tuple[int, int]:
-    """Mirror PIL.Image.thumbnail's size math so skipped photos report exact dimensions."""
-    if width <= long_edge and height <= long_edge:
-        return width, height
-    aspect = width / height
-    x = y = long_edge
-
-    def round_aspect(number, key):
-        return max(min(math.floor(number), math.ceil(number), key=key), 1)
-
-    if x / y >= aspect:
-        x = round_aspect(y * aspect, key=lambda n: abs(aspect - n / y))
-    else:
-        y = round_aspect(x / aspect, key=lambda n: 0 if n == 0 else abs(aspect - x / n))
-    return x, y
+fit_size = imaging.fit_size  # kept here too: the reuse path below and older callers use it
 
 
 def _oriented_size(img: Image.Image) -> tuple[int, int]:
     orientation = img.getexif().get(0x0112, 1)
     w, h = img.size
     return (h, w) if orientation in (5, 6, 7, 8) else (w, h)
+
+
+def _too_fresh(src, cfg, now: float) -> str | None:
+    """A file changed in the last few seconds may still be half-written."""
+    settle = getattr(cfg, "settle_seconds", 0) or 0
+    try:
+        age = now - src.stat().st_mtime
+    except OSError:
+        return None  # the read that follows reports it properly
+    if settle and age < settle:
+        return (f"modified {max(age, 0):.0f}s ago (export still running?); "
+                "skipped, and photos.json waits for the next run")
+    return None
+
+
+def _unreadable(result: Result, where: str, src, exc: Exception) -> None:
+    """Pillow does not recognise the file. For an image extension Pillow
+    handles (.jpg, .png, .tif, ...) that means a damaged file: an error, which
+    keeps the published photos.json. Anything else (a .heic without a
+    plugin, a stray .txt) is a warning, so it never blocks the site."""
+    if src.suffix.lower() in Image.registered_extensions():
+        result.errors.append(f"{where}: unreadable image ({exc}); skipped")
+    else:
+        result.warnings.append(f"{where}: not an image format photo-sync can read; skipped")
+
+
+def _instant(taken_at: str) -> datetime:
+    """Sortable capture time. With a recorded UTC offset this is the true
+    instant; without one, the camera's wall clock is the best there is."""
+    t = datetime.fromisoformat(taken_at)
+    return t.astimezone(timezone.utc).replace(tzinfo=None) if t.tzinfo else t
+
+
+def _capture_order(photo: dict):
+    taken = photo["exif"].get("taken_at")
+    return (taken is None, _instant(taken) if taken else datetime.min,
+            archive.name_key(photo["_name"]))
+
+
+def pick_cover(photos: list[dict]) -> str:
+    """Cover when album.md names none: the highest-rated portrait photo (the
+    site's album cards are 2:3), else the highest-rated landscape one, which
+    the site center-crops. Ties go to the earliest capture. `photos` must be
+    in capture order and carry `_rating` (unrated = 0)."""
+    portraits = [p for p in photos if p["height"] > p["width"]]
+    pool = portraits or photos
+    best = max(pool, key=lambda p: p["_rating"])  # max keeps the first, i.e. earliest
+    return best["id"]
 
 
 def format_issues(issues: list[archive.NamingIssue]) -> str:
@@ -180,9 +219,10 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         result.skipped = reason
         log(f"Skipping sync: {reason}. Nothing was uploaded or deleted.")
         return result
-    shoots, issues = archive.scan(cfg.source_root, result.errors)
+    shoots, issues = archive.scan(cfg.source_root, result.errors, result.warnings)
     result.issues = issues
     log(format_issues(issues))
+    now = time.time()
 
     if check:
         visible = [s for s in shoots if not s.meta.hidden and not s.meta_unreadable]
@@ -190,16 +230,24 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         result.hidden_albums = sum(1 for s in shoots if s.meta.hidden)
         for shoot in visible:
             for src in shoot.photos:
+                where = f"{shoot.rel}/_web/{src.name}"
+                if (msg := _too_fresh(src, cfg, now)):
+                    result.warnings.append(f"{where}: {msg}")
+                    continue
                 try:
-                    with Image.open(src) as img:
+                    with imaging.open_image(src) as img:
                         img.verify()
                     result.photos += 1
+                except UnidentifiedImageError as exc:
+                    _unreadable(result, where, src, exc)
                 except Exception as exc:  # noqa: BLE001 - any decode failure is a per-file error
-                    result.errors.append(f"{shoot.rel}/_web/{src.name}: unreadable image ({exc})")
+                    result.errors.append(f"{where}: unreadable image ({exc})")
+        for warning in result.warnings:
+            log(f"Warning: {warning}")
         log(format_errors(result.errors))
         log(f"Check: {result.albums} albums, {result.hidden_albums} hidden, "
             f"{result.photos} photos, {len(issues)} naming issues, "
-            f"{len(result.errors)} errors. No changes made.")
+            f"{len(result.warnings)} warnings, {len(result.errors)} errors. No changes made.")
         return result
 
     if target is None:
@@ -226,7 +274,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         if shoot.meta_unreadable:
             continue  # already in result.errors
         if not shoot.photos:
-            result.warnings.append(f"{shoot.rel}: _web/ has no JPEGs; skipped")
+            result.warnings.append(f"{shoot.rel}: _web/ has no files; skipped")
             continue
 
         base_slug = _base_slug(shoot)
@@ -242,25 +290,30 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         photos: list[dict] = []
         cover_id = None
         seen_ids: set[str] = set()
+        cover_key = archive.name_key(shoot.meta.cover) if shoot.meta.cover else None
 
         for src in shoot.photos:
+            where = f"{shoot.rel}/_web/{src.name}"
+            if (msg := _too_fresh(src, cfg, now)):
+                result.warnings.append(f"{where}: {msg}")
+                result.fresh.append(where)
+                continue
             raw = src.read_bytes()
             digest = content_digest(raw, fingerprint)
             photo_slug = archive.slugify(src.stem)
             keys = photo_keys(slug, photo_slug, digest)
             photo_id = f"{photo_slug}-{digest[:8]}"
             if photo_id in seen_ids:
-                result.warnings.append(f"{shoot.rel}/_web/{src.name}: duplicate of another export; skipped")
+                result.warnings.append(f"{where}: duplicate of another export; skipped")
                 continue
-            seen_ids.add(photo_id)
 
             reuse = all(k in existing for k in keys.values())
             try:
                 if reuse:
                     # Lazy open: EXIF and size come from the header, no full decode.
-                    img = Image.open(io.BytesIO(raw))
+                    img = imaging.open_image(io.BytesIO(raw))
                 else:
-                    img = imaging.load_source(io.BytesIO(raw))
+                    img = imaging.load_source(io.BytesIO(raw), imaging.SIZES["large"])
                 exif = imaging.read_exif(img)
                 description = imaging.read_description(img)
                 if reuse:
@@ -277,9 +330,13 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
                             wm_opacity=cfg.watermark_opacity,
                         )
                     width, height = rendered["large"].width, rendered["large"].height
-            except Exception as exc:  # noqa: BLE001 - any decode/render failure skips just this photo
-                result.errors.append(f"{shoot.rel}/_web/{src.name}: unreadable image ({exc}); skipped")
+            except UnidentifiedImageError as exc:
+                _unreadable(result, where, src, exc)
                 continue
+            except Exception as exc:  # noqa: BLE001 - any decode/render failure skips just this photo
+                result.errors.append(f"{where}: unreadable image ({exc}); skipped")
+                continue
+            seen_ids.add(photo_id)
 
             expected.update(keys.values())
             if rendered is None:
@@ -289,9 +346,9 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
                     target.put(keys[size], out.data, "image/webp", PHOTO_CACHE)
                     result.uploaded_objects += 1
                 result.uploaded_photos += 1
-                log(f"  + {shoot.rel}/_web/{src.name}")
+                log(f"  + {where}")
 
-            if shoot.meta.cover and src.name.lower() == shoot.meta.cover.lower():
+            if cover_key and archive.name_key(src.name) == cover_key:
                 cover_id = photo_id
             photos.append({
                 "id": photo_id,
@@ -302,22 +359,27 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
                 "sizes": dict(keys),
                 "exif": exif,
                 "_name": src.name,
+                "_rating": imaging.read_rating(raw) or 0,
             })
 
-        photos.sort(key=lambda p: (p["exif"].get("taken_at") is None,
-                                   p["exif"].get("taken_at", ""), p["_name"].lower()))
-        for p in photos:
-            p.pop("_name")
+        photos.sort(key=_capture_order)
         if not photos:
             continue
         if shoot.meta.cover and cover_id is None:
-            result.warnings.append(f"{shoot.rel}: cover '{shoot.meta.cover}' not found in _web/; using first photo")
+            result.warnings.append(f"{shoot.rel}: cover '{shoot.meta.cover}' not found in _web/; "
+                                   "picking one automatically")
+        cover_id = cover_id or pick_cover(photos)
+        for p in photos:
+            p.pop("_name")
+            p.pop("_rating")
 
         if shoot.folder_date is not None:
             album_date = shoot.folder_date.isoformat()
         else:
-            times = [p["exif"]["taken_at"] for p in photos if p["exif"].get("taken_at")]
-            album_date = min(times)[:10] if times else None
+            dated = [p for p in photos if p["exif"].get("taken_at")]
+            # Photos are in capture order, so the first dated one is the
+            # earliest; its local calendar date is the album's date.
+            album_date = dated[0]["exif"]["taken_at"][:10] if dated else None
             if album_date is None:
                 result.warnings.append(f"{shoot.rel}: no folder date and no EXIF date; album date unknown")
 
@@ -326,7 +388,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
             "title": title,
             "date": album_date,
             "intro": shoot.meta.intro,
-            "cover": cover_id or photos[0]["id"],
+            "cover": cover_id,
             "year": shoot.year,
             "photos": photos,
         }
@@ -394,6 +456,14 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         hold = "errors"
         log("Not updating photos.json: fix the errors below first, so an unreadable "
             "file does not disappear from the site. Rendered images were still uploaded.")
+    elif result.fresh:
+        # Lightroom is probably mid-export. Publishing now would drop those
+        # photos (or, if a whole folder is being copied, most of the site), so
+        # wait for the next run. Not an error: nothing is wrong.
+        hold = "fresh"
+        log(f"Not updating photos.json this run: {len(result.fresh)} file(s) in _web/ "
+            "changed in the last few seconds (export still running?). Rendered images "
+            "were still uploaded; the next run publishes.")
     elif (reason := shrink_reason(previous, manifest, hidden_prefixes)) and not getattr(cfg, "allow_shrink", False):
         hold = "shrink"
         result.blocked = reason

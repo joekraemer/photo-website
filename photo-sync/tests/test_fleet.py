@@ -181,8 +181,8 @@ def test_sentinel_rechecked_after_scan(tmp_path, monkeypatch):
 
     real_scan = archive.scan
 
-    def scan_then_unplug(root, errors=None):
-        found = real_scan(root, errors)
+    def scan_then_unplug(root, errors=None, warnings=None):
+        found = real_scan(root, errors, warnings)
         (src / ".photo-archive").unlink()
         shutil.rmtree(src / "2024")
         return found
