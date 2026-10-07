@@ -14,8 +14,16 @@ class ConfigError(ValueError):
     pass
 
 
+# Path settings that, when they come from an env file, are resolved relative to
+# that file's folder rather than the current directory.
+PATH_KEYS = ("PHOTO_SOURCE_ROOT", "LOCAL_TARGET_DIR")
+
+
 def load_env_file(path: Path, environ: dict | None = None) -> None:
-    """Load KEY=VALUE lines into environ without overriding values already set."""
+    """Load KEY=VALUE lines into environ without overriding values already set.
+
+    Relative PATH_KEYS values are resolved against the env file's folder, so
+    LOCAL_TARGET_DIR=../public/local-photos works from any working directory."""
     environ = os.environ if environ is None else environ
     if not path.is_file():
         return
@@ -30,6 +38,10 @@ def load_env_file(path: Path, environ: dict | None = None) -> None:
         value = value.strip()
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
             value = value[1:-1]
+        if key in PATH_KEYS and value:
+            p = Path(value).expanduser()
+            if not p.is_absolute():
+                value = str((path.resolve().parent / p).resolve())
         environ.setdefault(key, value)
 
 

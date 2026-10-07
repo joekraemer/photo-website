@@ -296,6 +296,18 @@ def test_config_repr_hides_secrets(src):
     assert cfg.watermark_text == "@jak_creative" and cfg.watermark_opacity == 0.4
 
 
+def test_env_file_paths_relative_to_file(tmp_path, monkeypatch):
+    d = tmp_path / "photo-sync"
+    d.mkdir()
+    f = d / ".env"
+    f.write_text("LOCAL_TARGET_DIR=../public/local-photos\nPHOTO_SOURCE_ROOT=/abs/archive\n")
+    monkeypatch.chdir(tmp_path.parent)
+    env = {}
+    load_env_file(f, env)
+    assert env["LOCAL_TARGET_DIR"] == str((tmp_path / "public" / "local-photos").resolve())
+    assert env["PHOTO_SOURCE_ROOT"] == "/abs/archive"
+
+
 def test_env_file_does_not_override(tmp_path):
     f = tmp_path / ".env"
     f.write_text("# c\nA=from_file\nexport B='quoted'\n")
@@ -454,3 +466,12 @@ def test_hiding_album_deletes_its_objects_without_prune(src, out):
     assert "2024-06-15-greece" not in [a["slug"] for a in result.manifest["albums"]]
     assert result.orphans == []
     assert len(list((out / "photos").rglob("*.webp"))) == 9  # other albums untouched
+
+
+def test_s3_client_disables_default_checksums():
+    cfg = Config.from_env({"PHOTO_SOURCE_ROOT": "/x", "TARGET": "s3", "S3_BUCKET": "b",
+                           "S3_KEY_ID": "k", "S3_APP_KEY": "s",
+                           "S3_ENDPOINT_URL": "https://s3.us-west-004.backblazeb2.com"})
+    client = S3Target.from_config(cfg).client
+    assert client.meta.config.request_checksum_calculation == "when_required"
+    assert client.meta.config.response_checksum_validation == "when_required"

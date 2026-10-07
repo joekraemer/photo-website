@@ -57,7 +57,13 @@ class S3Target:
             endpoint_url=cfg.s3_endpoint_url,
             aws_access_key_id=cfg.s3_key_id,
             aws_secret_access_key=cfg.s3_app_key,
-            config=BotoConfig(retries={"max_attempts": 5, "mode": "standard"}),
+            config=BotoConfig(
+                retries={"max_attempts": 5, "mode": "standard"},
+                # boto3 >= 1.36 sends CRC32 checksum headers by default, which some
+                # S3-compatible providers (incl. B2 at times) reject.
+                request_checksum_calculation="when_required",
+                response_checksum_validation="when_required",
+            ),
         )
         return cls(cfg.s3_bucket, client)
 
