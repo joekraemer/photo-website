@@ -34,7 +34,6 @@ function normalizeManifest(manifest) {
         const photos = (album.photos || []).map((photo) => ({
             ...photo,
             albumSlug: album.slug,
-            albumTitle: album.title,
             urls: {
                 thumb: `${base}/${photo.sizes.thumb}`,
                 medium: `${base}/${photo.sizes.medium}`,

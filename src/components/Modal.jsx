@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { exifLine } from '../services/photoService';
 import './Modal.css';
 
-// Full-screen lightbox: the watermarked large size plus album title and EXIF.
+// Full-screen lightbox: the watermarked large size plus its EXIF.
 function Modal({ photo, onClose }) {
     const closeRef = useRef(null);
 
@@ -40,10 +40,9 @@ function Modal({ photo, onClose }) {
                 <button type="button" className="modal-button" onClick={onClose} aria-label="Close" ref={closeRef}>
                     <i className="fas fa-times" aria-hidden="true" />
                 </button>
-                {(photo.albumTitle || exif) && (
+                {exif && (
                     <div className="exif__data">
-                        {photo.albumTitle && <p className="exif__album">{photo.albumTitle}</p>}
-                        {exif && <p>{exif}</p>}
+                        <p>{exif}</p>
                     </div>
                 )}
             </div>

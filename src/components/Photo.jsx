@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 
-// One photo in a grid. variant="thumb" (overview grids) or "medium" (album view,
-// with a srcset so small screens can still take the thumb).
+// One photo in a grid. Both variants offer thumb and medium through srcset so a
+// photo shown wide (e.g. alone in its row) gets the medium size instead of a
+// stretched thumb. variant="medium" (album view) also defaults src to medium.
 function Photo({ photo, variant = 'thumb' }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const imgProps = variant === 'medium'
-        ? {
-            src: photo.urls.medium,
-            srcSet: `${photo.urls.thumb} 500w, ${photo.urls.medium} 1600w`,
-            sizes: '(max-width: 768px) 100vw, 50vw',
-        }
-        : { src: photo.urls.thumb };
+    const imgProps = {
+        src: variant === 'medium' ? photo.urls.medium : photo.urls.thumb,
+        srcSet: `${photo.urls.thumb} 500w, ${photo.urls.medium} 1600w`,
+        sizes: '(max-width: 768px) 100vw, 50vw',
+    };
 
     return (
         <>
