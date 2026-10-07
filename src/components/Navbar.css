@@ -81,6 +81,13 @@
 
 .menu-icon {
     display: none;
+    /* A real button so it is keyboard operable; reset the browser button look. */
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
 }
 
 @media screen and (max-width: 730px) {
