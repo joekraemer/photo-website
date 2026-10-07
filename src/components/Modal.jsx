@@ -1,59 +1,48 @@
-import React, { useEffect } from 'react'
-import { Fraction } from 'mathjs';
-import './Modal.css'
+import React, { useEffect, useRef } from 'react';
+import { exifLine } from '../services/photoService';
+import './Modal.css';
 
-function formatShutterSpeed(shutterSpeed) {
-    if (shutterSpeed > 1) {
-        // Format as a decimal with one decimal place
-        return shutterSpeed.toFixed(1);
-    } else {
-        // Convert to a fraction
-        return Fraction(shutterSpeed);
-    }
-}
+// Full-screen lightbox: the watermarked large size plus its EXIF.
+function Modal({ photo, onClose }) {
+    const closeRef = useRef(null);
 
-
-function formatISO(isoValue) {
-    if (isoValue < 200) {
-        return Math.round(isoValue / 25) * 25;
-    } else {
-        return Math.round(isoValue / 100) * 100;
-    }
-}
-
-function Modal({ src, onClose, exifData }) {
+    // Move focus into the dialog and give it back to the opener on close.
     useEffect(() => {
-        // Function to handle clicks outside of the modal
-        function handleClickOutside(event) {
-            const modalContent = document.querySelector('.modal-content');
-            if (modalContent && !modalContent.contains(event.target)) {
-                onClose(); // Close the modal if clicked outside
-            }
-        }
+        const opener = document.activeElement;
+        if (closeRef.current) closeRef.current.focus();
+        return () => { if (opener && opener.focus) opener.focus(); };
+    }, []);
 
-        // Add a click event listener on the document
-        document.addEventListener('click', handleClickOutside);
-
-        // Clean up the event listener when the component unmounts
-        return () => {
-            document.removeEventListener('click', handleClickOutside);
-        };
+    useEffect(() => {
+        const onKey = (event) => { if (event.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
     }, [onClose]);
 
-    const apertureRounded = exifData ? Math.round(exifData.ApertureValue * 10) / 10 : null;
-    const shutterSpeedFormatted = exifData ? formatShutterSpeed(exifData.ExposureTime) : null;
-    const isoFormatted = exifData ? formatISO(exifData.ISO) : null;
+    const exif = exifLine(photo.exif);
 
     return (
-        <div className="modal">
+        <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={photo.alt}
+            onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
+        >
             <div className="modal-content">
-                <img className="modal-img" src={src} alt="Full Resolution" />
-                <div className='modal-button' onClick={onClose}>
-                    <i className='fas fa-times' onClick={onClose} />
-                </div>
-                {exifData && (
+                <img
+                    className="modal-img"
+                    src={photo.urls.large}
+                    alt={photo.alt}
+                    width={photo.width}
+                    height={photo.height}
+                />
+                <button type="button" className="modal-button" onClick={onClose} aria-label="Close" ref={closeRef}>
+                    <i className="fas fa-times" aria-hidden="true" />
+                </button>
+                {exif && (
                     <div className="exif__data">
-                        <p>{shutterSpeedFormatted.n}/{shutterSpeedFormatted.d}   f/{apertureRounded}   ISO {isoFormatted}</p>
+                        <p>{exif}</p>
                     </div>
                 )}
             </div>
@@ -61,6 +50,4 @@ function Modal({ src, onClose, exifData }) {
     );
 }
 
-
 export default Modal;
-

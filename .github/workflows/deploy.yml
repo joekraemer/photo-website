@@ -1,0 +1,66 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow this workflow to deploy to Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment; cancel in-progress runs for the same ref
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check photo hosting variable
+        env:
+          PHOTOS_BASE_URL: ${{ vars.PHOTOS_BASE_URL }}
+        run: |
+          if [ -z "$PHOTOS_BASE_URL" ]; then
+            echo "::warning::PHOTOS_BASE_URL is not set; the site will show no photos"
+          fi
+
+      - name: Build
+        env:
+          # CRA treats warnings as errors in CI by default; keep the build green on lint warnings.
+          CI: false
+          # Where photos.json lives (Cloudflare in front of B2). Set under
+          # Settings -> Secrets and variables -> Actions -> Variables.
+          REACT_APP_PHOTOS_BASE_URL: ${{ vars.PHOTOS_BASE_URL }}
+        run: npm run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

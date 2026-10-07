@@ -5,7 +5,7 @@ function HeroSection() {
     return (
         <div className='hero__section__container'>
             <figure className="hero__section__figure">
-                <img src="/photos/herophoto.png" alt="Hero Section" className="hero__section__img" />
+                <img src={`${process.env.PUBLIC_URL}/photos/herophoto.png`} alt="Hero Section" className="hero__section__img" />
             </figure>
             <p className="hero__section__text">
                 My name is <span className="bold-name">Joe Kraemer</span><br /><br />

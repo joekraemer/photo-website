@@ -1,41 +1,27 @@
 import React from 'react';
 import Photo from './Photo';
-import './PhotoGrid.css'
+import './PhotoGrid.css';
 
-
-function PhotoGrid({ photoSources }) {
-    // Create arrays to hold rows of vertical and horizontal photos
+// Rows of three verticals or two horizontals, interleaved, using the manifest's
+// aspect ratio instead of loading every image to measure it.
+function PhotoGrid({ photos, variant = 'thumb' }) {
     const verticalRows = [];
     const horizontalRows = [];
-    let currentVerticalRow = [];
-    let currentHorizontalRow = [];
+    let vertical = [];
+    let horizontal = [];
 
-    // Iterate through the photoSources and organize them into rows
-    photoSources.forEach((src, index) => {
-        // src is now the main photo and the thumbnail
-        const fullImageUrl = src[0];
-        const thumbImageUrl = src[1];
-        const aspectClass = src[2]
-
-        if (aspectClass === 'vertical') {
-            currentVerticalRow.push(<Photo key={index} srcThumb={thumbImageUrl} srcFull={fullImageUrl} />);
+    photos.forEach((photo) => {
+        const cell = <Photo key={photo.id} photo={photo} variant={variant} />;
+        if ((photo.aspect || 1) < 1) {
+            vertical.push(cell);
+            if (vertical.length === 3) { verticalRows.push(vertical); vertical = []; }
         } else {
-            currentHorizontalRow.push(<Photo key={index} srcThumb={thumbImageUrl} srcFull={fullImageUrl} />);
-        }
-
-        // Check if it's time to start a new row
-        if (aspectClass === 'vertical') {
-            if (currentVerticalRow.length === 3 || (currentVerticalRow.length === 2 && index === photoSources.length - 1)) {
-                verticalRows.push(currentVerticalRow);
-                currentVerticalRow = [];
-            }
-        } else {
-            if (currentHorizontalRow.length === 2 || (currentHorizontalRow.length === 1 && index === photoSources.length - 1)) {
-                horizontalRows.push(currentHorizontalRow);
-                currentHorizontalRow = [];
-            }
+            horizontal.push(cell);
+            if (horizontal.length === 2) { horizontalRows.push(horizontal); horizontal = []; }
         }
     });
+    if (vertical.length) verticalRows.push(vertical);
+    if (horizontal.length) horizontalRows.push(horizontal);
 
     const rows = [];
     const maxLength = Math.max(verticalRows.length, horizontalRows.length);

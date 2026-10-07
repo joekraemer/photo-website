@@ -16,6 +16,8 @@
 .photo__img {
     height: 100%;
     width: 100%;
+    /* A lone vertical photo in a row would otherwise grow to the full width. */
+    max-height: 85vh;
     object-fit: contain;
 }
 
@@ -40,4 +42,12 @@
         height: auto;
         /* Maintain aspect ratio */
     }
+}
+.photo__figure {
+    cursor: zoom-in;
+}
+
+.photo__img {
+    display: block;
+    height: auto;
 }

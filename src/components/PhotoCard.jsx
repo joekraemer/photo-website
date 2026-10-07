@@ -1,33 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { getUrl } from 'aws-amplify/storage';
+import { formatAlbumDate } from '../services/photoService';
 import './PhotoCard.css';
 
-function PhotoCard(props) {
-    const [imageSrc, setImageSrc] = useState(null);
-
-    useEffect(() => {
-        // Load the image from S3 when the component mounts
-        getUrl(props.photoObj)
-            .then((res) => {
-                setImageSrc(res.url);
-            })
-            .catch((error) => {
-                console.error('Error loading image from S3:', error);
-            });
-    }, [props.photoObj]);
-
+function PhotoCard({ album }) {
+    const cover = album.coverPhoto;
     return (
-        <>
-            <div className={`photo__card`} >
-                <Link to={props.path}>
-                    <figure className={`photo__card`} >
-                        <img src={imageSrc} alt='cover and sub cards' />
-                    </figure>
-                    <h3 className='photo__card__title'> {props.title} </h3>
-                </Link>
-            </div>
-        </>
+        <div className="photo__card">
+            <Link to={`/photos/${album.slug}`}>
+                <figure className="photo__card">
+                    {cover && <img src={cover.urls.thumb} alt={cover.alt} loading="lazy" />}
+                </figure>
+                <h3 className="photo__card__title">{album.title}</h3>
+                {album.date && <p className="photo__card__date">{formatAlbumDate(album.date)}</p>}
+            </Link>
+        </div>
     );
 }
 

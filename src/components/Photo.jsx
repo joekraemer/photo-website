@@ -1,39 +1,32 @@
 import React, { useState } from 'react';
-import Modal from './Modal'; // Import the Modal component
-import exifr from 'exifr';
+import Modal from './Modal';
 
-function Photo({ srcThumb, srcFull }) {
+// One photo in a grid. Both variants offer thumb and medium through srcset so a
+// photo shown wide (e.g. alone in its row) gets the medium size instead of a
+// stretched thumb. variant="medium" (album view) also defaults src to medium.
+function Photo({ photo, variant = 'thumb' }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [exifData, setExifData] = useState(null);
 
-
-    const openModal = async () => {
-        // try {
-        //     const data = await exifr.parse(srcThumb.href);
-        //     setExifData(data);
-        // } catch (error) {
-        //     console.error('Error reading EXIF data:', error);
-        // }
-
-        console.log('open modal');
-        setIsModalOpen(true);
-    };
-
-    const closeModal = (event) => {
-        console.log('close modal attempt');
-        if (event && event.target === event.currentTarget) {
-            setIsModalOpen(false);
-            console.log('close modal set');
-        }
+    const imgProps = {
+        src: variant === 'medium' ? photo.urls.medium : photo.urls.thumb,
+        srcSet: `${photo.urls.thumb} 500w, ${photo.urls.medium} 1600w`,
+        sizes: '(max-width: 768px) 100vw, 50vw',
     };
 
     return (
         <>
-            <figure className={`photo__figure`} onClick={(event) => openModal(event)}>
-                {srcThumb && <img className={`photo__img`} src={srcThumb} alt={`thumbnail-${srcThumb}`} loading="lazy" />}
-            </figure >
-            {isModalOpen && <Modal src={srcFull} onClose={closeModal} exifData={exifData} />
-            }
+            <figure className="photo__figure" onClick={() => setIsModalOpen(true)}>
+                <img
+                    className="photo__img"
+                    alt={photo.alt}
+                    width={photo.width}
+                    height={photo.height}
+                    loading="lazy"
+                    decoding="async"
+                    {...imgProps}
+                />
+            </figure>
+            {isModalOpen && <Modal photo={photo} onClose={() => setIsModalOpen(false)} />}
         </>
     );
 }
