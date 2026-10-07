@@ -20,6 +20,14 @@ PHOTO_PREFIX = "photos/"
 MANIFEST_VERSION = 1
 # Bump when rendering code changes in a way that should re-render every photo.
 RENDER_VERSION = 1
+# A file at the archive root that proves the real drive is there (not an empty
+# mount point or a half-unmounted volume). Checked before and after the scan
+# when cfg.require_sentinel is set (the fleet entry point sets it).
+SENTINEL = ".photo-archive"
+# A sync that would drop more than this share of albums or photos, or lose a
+# whole year, is held back (no manifest write, no prune) unless
+# PHOTO_ALLOW_SHRINK=1.
+MAX_SHRINK = 0.20
 
 
 @dataclass
@@ -40,6 +48,11 @@ class Result:
     # without the affected photo/album; the CLI exits non-zero.
     errors: list[str] = field(default_factory=list)
     manifest: dict | None = None
+    # Set when the run was skipped before writing anything (sentinel missing).
+    skipped: str | None = None
+    # Set when the shrink guard held back the manifest and the prune. The CLI
+    # exits non-zero so the fleet health check flags it.
+    blocked: str | None = None
 
 
 def render_fingerprint(cfg) -> bytes:
@@ -114,6 +127,46 @@ def _strip_volatile(manifest: dict | None) -> dict | None:
     return {k: v for k, v in manifest.items() if k != "generated_at"}
 
 
+def sentinel_missing(cfg) -> str | None:
+    if not getattr(cfg, "require_sentinel", False):
+        return None
+    try:
+        if (cfg.source_root / SENTINEL).is_file():
+            return None
+    except OSError:
+        pass
+    return f"{cfg.source_root}/{SENTINEL} not found (archive drive missing or pulled?)"
+
+
+def shrink_reason(previous: dict | None, manifest: dict,
+                  hidden_prefixes: list[str] = ()) -> str | None:
+    """Why publishing `manifest` over `previous` looks like a lost source, or None.
+
+    Albums the archive now marks hidden are left out of the comparison: hiding
+    one is a deliberate removal, seen in album.md, not a missing folder."""
+    if not previous or not previous.get("albums"):
+        return None
+
+    def hidden(album: dict) -> bool:
+        return f"{PHOTO_PREFIX}{album.get('slug')}/" in hidden_prefixes
+
+    old = [a for a in previous["albums"] if not hidden(a)]
+    new = manifest["albums"]
+    if not old:
+        return None
+    old_years = {a.get("year") for a in old if a.get("year") is not None}
+    new_years = {a.get("year") for a in new if a.get("year") is not None}
+    gone = sorted(old_years - new_years)
+    if gone:
+        return f"year(s) {', '.join(map(str, gone))} disappeared from the source"
+    old_photos = sum(len(a.get("photos", [])) for a in old)
+    new_photos = sum(len(a.get("photos", [])) for a in new)
+    for what, before, after in (("albums", len(old), len(new)), ("photos", old_photos, new_photos)):
+        if before and after < before * (1 - MAX_SHRINK):
+            return f"{what} would drop from {before} to {after} (more than {MAX_SHRINK:.0%})"
+    return None
+
+
 def _base_slug(shoot: archive.Shoot) -> str:
     if shoot.conforming:
         return f"{shoot.folder_date.isoformat()}-{archive.slugify(shoot.name)}"
@@ -123,6 +176,10 @@ def _base_slug(shoot: archive.Shoot) -> str:
 def run(cfg, target=None, *, check: bool = False, prune: bool = False,
         log: Callable[[str], None] = print) -> Result:
     result = Result()
+    if not check and (reason := sentinel_missing(cfg)):
+        result.skipped = reason
+        log(f"Skipping sync: {reason}. Nothing was uploaded or deleted.")
+        return result
     shoots, issues = archive.scan(cfg.source_root, result.errors)
     result.issues = issues
     log(format_issues(issues))
@@ -147,6 +204,12 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
 
     if target is None:
         raise ValueError("a target is required unless check=True")
+
+    # Again after the scan: a drive pulled mid-scan reads as missing folders.
+    if reason := sentinel_missing(cfg):
+        result.skipped = reason
+        log(f"Skipping sync: {reason}. Nothing was uploaded or deleted.")
+        return result
 
     existing = target.list_keys(PHOTO_PREFIX)
     expected: set[str] = set()
@@ -286,14 +349,64 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
     }
     result.manifest = manifest
 
+    # The published manifest is what the shrink and error guards compare
+    # against. If it is there but can't be read or parsed, those guards would
+    # be blind, so the run is held instead of treated as a first sync.
     previous = None
-    prev_raw = target.read(MANIFEST_KEY)
-    if prev_raw:
+    manifest_problem = None
+    try:
+        prev_raw = target.read(MANIFEST_KEY)
+    except Exception as exc:  # noqa: BLE001 - permission, network, provider errors
+        prev_raw = None
+        manifest_problem = f"the published photos.json could not be read ({type(exc).__name__})"
+    if prev_raw is not None:
         try:
             previous = json.loads(prev_raw)
-        except ValueError:
+            if not isinstance(previous, dict) or not isinstance(previous.get("albums"), list):
+                raise ValueError("no 'albums' list")
+        except ValueError as exc:
             previous = None
-    if _strip_volatile(previous) != _strip_volatile(manifest):
+            manifest_problem = f"the published photos.json is not valid JSON ({exc})"
+
+    # The drive may have gone away while rendering; publish nothing then.
+    if reason := sentinel_missing(cfg):
+        result.skipped = reason
+        log(f"Skipping manifest and prune: {reason}. Rendered images were uploaded; "
+            "nothing was deleted.")
+        return result
+
+    hold = None
+    if previous is None and manifest_problem is None and existing and prune:
+        # No photos.json but photos/ objects exist: someone deleted the
+        # manifest, or a previous run died before writing it. There is nothing
+        # to compare against, so publish but don't delete anything this run.
+        log(f"WARNING: no published photos.json but {len(existing)} objects under "
+            f"{PHOTO_PREFIX}; not pruning this run.")
+        prune = False
+
+    if manifest_problem:
+        hold = "unreadable"
+        result.blocked = manifest_problem
+        log(f"ERROR: {manifest_problem}. photos.json was not updated and nothing was "
+            "pruned. Fix or delete the published photos.json, then re-run.")
+    elif result.errors and previous is not None:
+        # Keep the published manifest rather than drop the photos that failed.
+        hold = "errors"
+        log("Not updating photos.json: fix the errors below first, so an unreadable "
+            "file does not disappear from the site. Rendered images were still uploaded.")
+    elif (reason := shrink_reason(previous, manifest, hidden_prefixes)) and not getattr(cfg, "allow_shrink", False):
+        hold = "shrink"
+        result.blocked = reason
+        log(f"ERROR: refusing to publish a smaller site: {reason}. photos.json was not "
+            "updated and nothing was pruned. If this is a deliberate cleanup, re-run with "
+            "PHOTO_ALLOW_SHRINK=1.")
+    elif reason:
+        log(f"Warning: {reason}; publishing anyway because PHOTO_ALLOW_SHRINK=1")
+
+    if hold:
+        result.manifest = previous
+        prune = False
+    elif _strip_volatile(previous) != _strip_volatile(manifest):
         body = json.dumps(manifest, indent=2, ensure_ascii=False).encode("utf-8")
         target.put(MANIFEST_KEY, body, "application/json; charset=utf-8", MANIFEST_CACHE)
         result.uploaded_objects += 1
@@ -304,6 +417,12 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
     # Hiding an album must take it off the bucket now, not at the next --prune:
     # its keys are guessable (slug + 8 hex chars). Only keys no visible album
     # uses are touched, so a visible album sharing the slug is safe.
+    #
+    # This runs even while photos.json is held back (errors, shrink, unreadable
+    # manifest). Then the published manifest still lists the hidden album and
+    # the site shows broken images for it until the hold clears. That is on
+    # purpose: hiding an album is a privacy decision, and taking its images
+    # offline now matters more than a tidy page in the meantime.
     hidden_keys = sorted(k for k in existing - expected
                          if any(k.startswith(p) for p in hidden_prefixes))
     if hidden_keys:
@@ -320,7 +439,12 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
             "file does not delete its published copies.")
         prune = False
     if result.orphans:
-        verb = "Deleting" if prune else "Orphaned (run with --prune to delete)"
+        if prune:
+            verb = "Deleting"
+        elif hold:
+            verb = "Orphaned (kept while photos.json is held back)"
+        else:
+            verb = "Orphaned (run with --prune to delete)"
         log(f"{verb}: {len(result.orphans)} objects")
         for key in result.orphans:
             log(f"  - {key}")
@@ -335,7 +459,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
     log(f"Done: {result.albums} albums, {result.photos} photos, "
         f"{result.uploaded_photos} rendered, {result.skipped_photos} unchanged, "
         f"{result.uploaded_objects} objects written, manifest "
-        f"{'updated' if result.manifest_written else 'unchanged'}, "
+        f"{'updated' if result.manifest_written else ('held back' if hold else 'unchanged')}, "
         f"{len(result.orphans)} orphans{' deleted' if prune and result.orphans else ''}, "
         f"{len(result.errors)} errors.")
     return result

@@ -63,6 +63,8 @@ def make_jpeg(path: Path, size=(3000, 2000), color=(70, 120, 180), *,
 
 def build(root: Path) -> Path:
     root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+    (root / ".photo-archive").write_text("photo-sync archive root\n", encoding="utf-8")
     greece = root / "2024" / "06-15-2024 Greece"
     make_jpeg(greece / "_web" / "DSC04351.jpg", taken_at="2024:06:15 09:00:00", label="Greece 1")
     make_jpeg(greece / "_web" / "DSC04639.jpg", size=(2000, 3000), color=(160, 90, 60),

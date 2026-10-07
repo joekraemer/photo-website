@@ -38,6 +38,49 @@ The bucket behind `PHOTOS_BASE_URL` needs a CORS rule that allows `GET` from
 `https://joekraemer.github.io`, or the site cannot fetch `photos.json`. Setup
 steps are in [issue #20](https://github.com/joekraemer/photo-website/issues/20).
 
+### Scheduled sync on the fleet host
+
+`photo-sync` also ships as a container image, `ghcr.io/joekraemer/photo-sync:main`,
+built by `.github/workflows/photo-sync-image.yml` whenever `photo-sync/` changes
+on `main`. The homelab fleet ([joekraemer/fleet](https://github.com/joekraemer/fleet))
+runs it every 6 hours through `photo-sync/loop.py`, with the archive drive mounted
+read-only. The site needs no rebuild after a sync: it fetches `photos.json` from
+`PHOTOS_BASE_URL` at runtime (cached for at most 5 minutes).
+
+Safety for unattended runs, because the drive is often unplugged:
+
+- **Skip when the drive isn't there.** The container's entry point,
+  `photo_sync.fleet`, skips the run (uploads and deletes nothing) when the
+  archive folder is missing, has no `.photo-archive` sentinel file at its root,
+  or holds no `<YEAR>/<shoot>/_web/` folders. The sentinel is checked again
+  after the scan, so a drive pulled mid-run is caught too. Mark the real drive
+  once with `touch /Volumes/<drive>/.photo-archive`.
+- **Refuse to shrink the site.** Before writing `photos.json` and before
+  pruning, `sync.run` compares against the published manifest. If a whole year
+  disappears, or the album or photo count drops by more than 20%, it writes no
+  manifest, prunes nothing, logs an `ERROR` and exits 1. Albums newly marked
+  `hidden` in `album.md` don't count. For a deliberate cleanup, run once with
+  `PHOTO_ALLOW_SHRINK=1`. The first real sync replaces the 3-album sample
+  currently on B2; run it normally, since the real archive is almost certainly
+  larger. Use the override only if that run logs the shrink `ERROR` and the
+  ERROR shows just the sample albums going away.
+- **Never compare blind.** If the published `photos.json` exists but can't be
+  read or parsed, the run is held the same way (`ERROR`, exit 1). If there is
+  no `photos.json` but photos are already on the target, the run publishes a
+  new manifest but deletes nothing.
+- **Keep the site on errors.** If any photo or `album.md` fails to read, the
+  run still uploads the images it rendered but keeps the previous
+  `photos.json`, so the failed photos don't vanish from the site.
+
+Settings: `PHOTO_SOURCE_ROOT`; `PHOTO_REQUIRE_SENTINEL` (on in the fleet
+entry point, off for the plain CLI); `PHOTO_ALLOW_SHRINK`;
+`PHOTO_REQUIRE_MOUNT` / `PHOTO_MOUNT_POINT` for a mount-point check, which
+the fleet turns off: under Colima the USB drive is not a separate mount inside
+the container, so the check cannot tell plugged from unplugged.
+
+Dependencies for the image are pinned in `photo-sync/uv.lock`; `uv sync` in
+`photo-sync/` gives the same environment locally.
+
 ## Available scripts
 
 ### `npm start`

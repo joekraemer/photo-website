@@ -45,6 +45,10 @@ def load_env_file(path: Path, environ: dict | None = None) -> None:
         environ.setdefault(key, value)
 
 
+def _flag(value: str | None) -> bool:
+    return (value or "").strip().lower() in ("1", "true", "yes", "on")
+
+
 @dataclass(frozen=True)
 class Config:
     source_root: Path
@@ -57,6 +61,9 @@ class Config:
     public_base_url: str = ""
     watermark_text: str = DEFAULT_WATERMARK
     watermark_opacity: float = DEFAULT_OPACITY
+    # Safety switches for unattended runs; see sync.SENTINEL / sync.shrink_reason.
+    require_sentinel: bool = False
+    allow_shrink: bool = False
 
     def __repr__(self) -> str:  # never leak secrets into logs or tracebacks
         return (
@@ -106,6 +113,8 @@ class Config:
             public_base_url=(get("PUBLIC_BASE_URL", "") or "").rstrip("/"),
             watermark_text=get("WATERMARK_TEXT", DEFAULT_WATERMARK) or "",
             watermark_opacity=opacity,
+            require_sentinel=_flag(get("PHOTO_REQUIRE_SENTINEL")),
+            allow_shrink=_flag(get("PHOTO_ALLOW_SHRINK")),
         )
         if require_target:
             cfg.validate()

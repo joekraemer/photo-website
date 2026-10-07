@@ -1,0 +1,106 @@
+# Build the photo-sync container image and publish it to GHCR as
+# ghcr.io/joekraemer/photo-sync:main. The fleet host (joekraemer/fleet) pulls
+# that tag every 10 minutes, so "push photo-sync/ to main" IS the deploy.
+#
+# This is fleet/templates/app/.github/workflows/build.yml adapted to a
+# monorepo: it only runs when photo-sync/ changes, builds from the photo-sync/
+# context, names the image photo-sync instead of the repo, runs the unit tests
+# first, and its smoke tests also run on pull requests.
+name: photo-sync image
+
+on:
+  push:
+    branches: [main]
+    paths: ["photo-sync/**", ".github/workflows/photo-sync-image.yml"]
+  pull_request:
+    branches: [main]
+    paths: ["photo-sync/**", ".github/workflows/photo-sync-image.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: photo-sync-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: photo-sync
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      - run: uv run --frozen pytest
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Only this job pushes to GHCR; the test job and the top level stay read-only.
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/photo-sync
+          tags: |
+            type=raw,value=main,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+            type=ref,event=pr
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: photo-sync
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Smoke test: the image starts, imports the app, and the guard skips a
+      # run with no archive mounted (no credentials needed, nothing uploaded).
+      - name: Smoke test
+        run: |
+          tag=$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | grep ':sha-' | head -1)
+          echo "testing $tag"
+          docker run --rm -e LOOP_ONCE=1 -e RUN_ARGS="--help" "$tag" 2>&1 | tail -20
+          out=$(docker run --rm -e LOOP_ONCE=1 -e RUN_ARGS="--prune" \
+            -e PHOTO_SOURCE_ROOT=/archive -e TARGET=s3 "$tag" 2>&1)
+          echo "$out"
+          echo "$out" | grep -q "Skipping sync: source /archive is missing"
+
+      # One real cycle in the container: a generated sample archive mounted
+      # read-only, rendered to a local folder (no bucket, no credentials).
+      - name: Sample cycle
+        run: |
+          tag=$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | grep ':sha-' | head -1)
+          mkdir -p sample out && chmod 777 sample out
+          docker run --rm -v "$PWD/sample:/sample" "$tag" python -m photo_sync.sample_archive /sample
+          docker run --rm -e LOOP_ONCE=1 -e RUN_ARGS="--prune" \
+            -e PHOTO_SOURCE_ROOT=/archive -e TARGET=local -e LOCAL_TARGET_DIR=/out \
+            -v "$PWD/sample:/archive:ro" -v "$PWD/out:/out" "$tag"
+          test -s out/photos.json
+          echo "webp files: $(find out -name '*.webp' | wc -l)"
