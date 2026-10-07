@@ -295,7 +295,7 @@ def test_config_repr_hides_secrets(src):
     cfg = Config.from_env({"PHOTO_SOURCE_ROOT": str(src), "TARGET": "s3", "S3_BUCKET": "b",
                            "S3_KEY_ID": "KEYID123", "S3_APP_KEY": "SUPERSECRET"})
     assert "SUPERSECRET" not in repr(cfg) and "KEYID123" not in str(cfg)
-    assert cfg.watermark_text == "@jak_creative" and cfg.watermark_opacity == 0.4
+    assert cfg.watermark_text == "@jak_creative_" and cfg.watermark_opacity == 0.4
 
 
 def test_env_file_paths_relative_to_file(tmp_path, monkeypatch):

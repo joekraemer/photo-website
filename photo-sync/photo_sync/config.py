@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_WATERMARK = "@jak_creative"
+DEFAULT_WATERMARK = "@jak_creative_"
 DEFAULT_OPACITY = 0.4
 
 
