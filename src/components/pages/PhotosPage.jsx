@@ -3,8 +3,10 @@ import '../../App.css';
 import './PhotosPage.css';
 import PhotoCard from '../PhotoCard';
 import useManifest from '../../services/useManifest';
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 
 function PhotosPage() {
+    useDocumentTitle('Photos');
     const { manifest, error, loading } = useManifest();
 
     return (

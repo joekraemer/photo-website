@@ -5,10 +5,12 @@ import HeroSection from '../HeroSection';
 import TextHeaderWithLine from '../TextHeaderWithLine';
 import PhotoGrid from '../PhotoGrid';
 import useManifest from '../../services/useManifest';
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 
 const RECENT_ALBUMS = 6;
 
 function Home() {
+    useDocumentTitle();
     const { manifest, error, loading } = useManifest();
     // Recent favorites = the cover photo of each of the newest albums.
     const favorites = manifest

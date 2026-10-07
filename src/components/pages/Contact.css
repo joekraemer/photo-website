@@ -46,3 +46,13 @@
         flex: 1;
     }
 }
+/* Email reads as plain text like before, underlined on hover/focus. */
+.email__link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.email__link:hover,
+.email__link:focus-visible {
+    text-decoration: underline;
+}
