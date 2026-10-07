@@ -7,9 +7,16 @@ CLI, this module checks the source and SKIPS the run when:
 
   * PHOTO_SOURCE_ROOT does not exist or is not a directory;
   * PHOTO_MOUNT_POINT (default: PHOTO_SOURCE_ROOT) is not a mount point, unless
-    PHOTO_REQUIRE_MOUNT=0;
+    PHOTO_REQUIRE_MOUNT=0 (the fleet sets 0: under Colima the drive is not a
+    separate mount inside the container, so the check cannot see it);
+  * the sentinel file <source>/.photo-archive is missing (PHOTO_REQUIRE_SENTINEL,
+    on by default here; sync.run checks it again after the scan);
   * the source holds zero shoot folders (<YEAR>/<shoot>/_web/), which is what an
     empty mount point or a stale macOS /Volumes/<name> folder looks like.
+
+A source that is there but smaller than what is published (a year folder
+moved away, a drive pulled mid-scan) is caught later by sync.run's shrink
+guard, which holds back photos.json and the prune unless PHOTO_ALLOW_SHRINK=1.
 
 A skip returns 0 and logs one INFO line: an unplugged drive is the normal case,
 not a failure for the fleet health check to open an issue about.
@@ -23,8 +30,8 @@ import os
 import sys
 from pathlib import Path
 
-from . import archive, cli
-from .config import load_env_file
+from . import archive, cli, sync
+from .config import _flag, load_env_file
 
 
 def _truthy(value: str | None, default: bool) -> bool:
@@ -60,6 +67,9 @@ def skip_reason(environ: dict | None = None) -> str | None:
             if not os.path.ismount(mount):
                 return (f"{mount} is not a mount point (archive drive not mounted?); "
                         "set PHOTO_REQUIRE_MOUNT=0 to sync from a plain folder")
+        if _flag(env.get("PHOTO_REQUIRE_SENTINEL", "1")) and not (root / sync.SENTINEL).is_file():
+            return (f"{root}/{sync.SENTINEL} not found (archive drive not plugged in?); "
+                    "create that empty file at the archive root to mark the real drive")
         shoots = count_shoots(root)
     except OSError as exc:  # drive yanked mid-scan, permission denied, ...
         return f"source {root} is unreadable ({exc.strerror or exc})"
@@ -72,6 +82,8 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else list(argv)
     if "-h" in argv or "--help" in argv:
         return cli.main(argv)
+    # Unattended runs always check the sentinel, before and after the scan.
+    os.environ.setdefault("PHOTO_REQUIRE_SENTINEL", "1")
     args, _ = cli.build_parser().parse_known_args(argv)
     if not args.check:
         # Resolve the source exactly as the CLI will: .env fills gaps in the

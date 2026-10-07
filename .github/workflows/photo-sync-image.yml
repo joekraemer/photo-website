@@ -19,7 +19,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: photo-sync-image-${{ github.ref }}
@@ -42,6 +41,10 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Only this job pushes to GHCR; the test job and the top level stay read-only.
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 

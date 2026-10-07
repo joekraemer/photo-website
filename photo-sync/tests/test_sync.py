@@ -249,7 +249,9 @@ def test_changed_export_gets_new_hash_and_prune(src, out):
 def test_removed_photo_is_orphan(src, out):
     run_local(src, out)
     (src / "2023" / "Road trip" / "_web" / "IMG_0001.jpg").unlink()
-    result = run_local(src, out, prune=True)
+    # One album of three is a 33% drop: deliberate here, so allow the shrink.
+    cfg = local_cfg(src, out, PHOTO_ALLOW_SHRINK="1")
+    result = sync.run(cfg, LocalTarget(out), log=quiet, prune=True)
     assert len(result.deleted) == 3
     assert not (out / "photos" / "road-trip").exists()
     assert "road-trip" not in [a["slug"] for a in result.manifest["albums"]]

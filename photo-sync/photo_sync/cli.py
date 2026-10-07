@@ -53,4 +53,4 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
-    return 1 if result.errors else 0
+    return 1 if result.errors or result.blocked else 0
