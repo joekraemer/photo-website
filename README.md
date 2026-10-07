@@ -38,6 +38,25 @@ The bucket behind `PHOTOS_BASE_URL` needs a CORS rule that allows `GET` from
 `https://joekraemer.github.io`, or the site cannot fetch `photos.json`. Setup
 steps are in [issue #20](https://github.com/joekraemer/photo-website/issues/20).
 
+### Scheduled sync on the fleet host
+
+`photo-sync` also ships as a container image, `ghcr.io/joekraemer/photo-sync:main`,
+built by `.github/workflows/photo-sync-image.yml` whenever `photo-sync/` changes
+on `main`. The homelab fleet ([joekraemer/fleet](https://github.com/joekraemer/fleet))
+runs it once a day through `photo-sync/loop.py`, with the archive drive mounted
+read-only. The site needs no rebuild after a sync: it fetches `photos.json` from
+`PHOTOS_BASE_URL` at runtime (cached for at most 5 minutes).
+
+The container's entry point is `photo_sync.fleet`, which skips the run (and
+uploads or deletes nothing) when the archive is missing, is not a mount point,
+or holds no `<YEAR>/<shoot>/_web/` folders. Without that guard an unplugged
+drive would publish an empty `photos.json` and, with `--prune`, delete every
+photo on the bucket. Settings: `PHOTO_SOURCE_ROOT`, `PHOTO_MOUNT_POINT`
+(defaults to the source root), `PHOTO_REQUIRE_MOUNT=0` to allow a plain folder.
+
+Dependencies for the image are pinned in `photo-sync/uv.lock`; `uv sync` in
+`photo-sync/` gives the same environment locally.
+
 ## Available scripts
 
 ### `npm start`

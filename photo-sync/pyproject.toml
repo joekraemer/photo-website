@@ -1,0 +1,23 @@
+[project]
+name = "photo-sync"
+version = "0.1.0"
+description = "Render the photo archive's _web/ exports and publish them plus photos.json to B2; a fleet app"
+requires-python = ">=3.12"
+# Same intent as requirements.txt (kept for the README's venv flow); uv.lock is
+# what the container image installs.
+dependencies = [
+    "Pillow>=10.1",
+    "boto3>=1.34",
+    "PyYAML>=6.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "moto[s3]>=5.0",
+]
+
+[tool.uv]
+# Keep the lockfile the single source of truth; CI and the Dockerfile use
+# `uv sync --frozen`, which fails loudly if pyproject and uv.lock disagree.
+package = false

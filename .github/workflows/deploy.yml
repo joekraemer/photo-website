@@ -3,6 +3,9 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+    # photo-sync is published as a container image by photo-sync-image.yml;
+    # changes there do not need a site rebuild.
+    paths-ignore: ["photo-sync/**", ".github/workflows/photo-sync-image.yml"]
   workflow_dispatch:
 
 # Allow this workflow to deploy to Pages
