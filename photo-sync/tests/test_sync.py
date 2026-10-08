@@ -146,7 +146,7 @@ def test_local_end_to_end(src, out):
 
     for album in m["albums"]:
         for photo in album["photos"]:
-            assert set(photo) == {"id", "alt", "width", "height", "aspect", "sizes", "color", "exif"}
+            assert set(photo) == {"id", "alt", "width", "height", "aspect", "sizes", "color", "thumbhash", "exif"}
             expected_edges = {"thumb": 500, "medium": 1600, "large": 2560}
             for size, key in photo["sizes"].items():
                 assert key.startswith(f"photos/{album['slug']}/") and key.endswith(f"-{size}.webp")
