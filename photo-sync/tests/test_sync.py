@@ -304,7 +304,8 @@ def test_config_repr_hides_secrets(src):
     cfg = Config.from_env({"PHOTO_SOURCE_ROOT": str(src), "TARGET": "s3", "S3_BUCKET": "b",
                            "S3_KEY_ID": "KEYID123", "S3_APP_KEY": "SUPERSECRET"})
     assert "SUPERSECRET" not in repr(cfg) and "KEYID123" not in str(cfg)
-    assert cfg.watermark_text == "@jak_creative_" and cfg.watermark_opacity == 0.4
+    assert cfg.watermark_text == "@jak_creative_" and cfg.watermark_opacity == 0.55
+    assert cfg.watermark_size == 0.07
 
 
 def test_env_file_paths_relative_to_file(tmp_path, monkeypatch):
@@ -366,6 +367,7 @@ def test_s3_target(src, monkeypatch):
 @pytest.mark.parametrize("change", [
     {"WATERMARK_TEXT": "@someone_else"},
     {"WATERMARK_OPACITY": "0.7"},
+    {"WATERMARK_SIZE": "0.05"},
 ])
 def test_render_setting_change_rerenders(src, out, change):
     run_local(src, out)

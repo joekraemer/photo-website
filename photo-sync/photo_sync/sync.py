@@ -20,7 +20,7 @@ PHOTO_PREFIX = "photos/"
 MANIFEST_VERSION = 1
 # Bump when rendering code changes in a way that should re-render every photo.
 # 2: decode-time downscale before the resize (large-photo memory fix).
-RENDER_VERSION = 2
+RENDER_VERSION = 3
 # A file at the archive root that proves the real drive is there (not an empty
 # mount point or a half-unmounted volume). Checked before and after the scan
 # when cfg.require_sentinel is set (the fleet entry point sets it).
@@ -69,6 +69,7 @@ def render_fingerprint(cfg) -> bytes:
         "webp_quality": imaging.WEBP_QUALITY,
         "watermark_text": cfg.watermark_text,
         "watermark_opacity": cfg.watermark_opacity,
+        "watermark_size": cfg.watermark_size,
         "watermark_font_sha256": imaging.font_digest(),
     }
     return json.dumps(settings, sort_keys=True).encode("utf-8")
@@ -356,6 +357,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
                             base, edge,
                             wm_text=cfg.watermark_text if is_large else None,
                             wm_opacity=cfg.watermark_opacity,
+                            wm_size=cfg.watermark_size,
                         )
                     width, height = rendered["large"].width, rendered["large"].height
             except UnidentifiedImageError as exc:
