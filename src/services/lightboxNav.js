@@ -45,3 +45,10 @@ export function stepIndex(index, step, length) {
     const next = index + step;
     return next >= 0 && next < length ? next : null;
 }
+
+// The page a URL belongs to for scroll purposes: /photos/<album>/<photo-id> is
+// the album page with its lightbox open, so opening a photo isn't a new page.
+export function pageKey(pathname) {
+    const match = /^(\/photos\/[^/]+)\/[^/]+\/?$/.exec(pathname);
+    return match ? match[1] : pathname;
+}

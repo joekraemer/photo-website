@@ -46,3 +46,17 @@ describe('swipeDirection', () => {
         expect(swipeDirection(-90, 120)).toBe(0);
     });
 });
+
+describe('pageKey', () => {
+    const { pageKey } = require('./lightboxNav');
+    it('treats a photo URL as its album page', () => {
+        expect(pageKey('/photos/south-korea/dsc09123-ab12cd34')).toBe('/photos/south-korea');
+        expect(pageKey('/photos/south-korea/dsc09123-ab12cd34/')).toBe('/photos/south-korea');
+    });
+    it('leaves other pages alone', () => {
+        expect(pageKey('/photos/south-korea')).toBe('/photos/south-korea');
+        expect(pageKey('/photos')).toBe('/photos');
+        expect(pageKey('/contact')).toBe('/contact');
+        expect(pageKey('/')).toBe('/');
+    });
+});
