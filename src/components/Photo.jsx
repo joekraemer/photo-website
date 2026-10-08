@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import Modal from './Modal';
+import React from 'react';
 
 // Grid layout numbers from App.css (.main__container) and PhotoGrid.css (.photo-row).
 const PAGE_PADDING_PX = 96;   // 3em each side
@@ -22,9 +21,8 @@ export function gridSizes(perRow = 1) {
 // One photo in a grid. Both variants offer thumb and medium through srcset so a
 // photo shown wide (e.g. alone in its row) gets the medium size instead of a
 // stretched thumb. variant="medium" (album view) also defaults src to medium.
-function Photo({ photo, variant = 'thumb', perRow = 1 }) {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
+// Opening the lightbox is up to the grid (onOpen), which knows the neighbours.
+function Photo({ photo, variant = 'thumb', perRow = 1, onOpen, buttonRef }) {
     const imgProps = {
         src: variant === 'medium' ? photo.urls.medium : photo.urls.thumb,
         srcSet: `${photo.urls.thumb} 500w, ${photo.urls.medium} 1600w`,
@@ -37,7 +35,8 @@ function Photo({ photo, variant = 'thumb', perRow = 1 }) {
                 <button
                     type="button"
                     className="photo__button"
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={onOpen}
+                    ref={buttonRef}
                     aria-label={`Open ${photo.alt}`}
                 >
                     <img
@@ -51,7 +50,6 @@ function Photo({ photo, variant = 'thumb', perRow = 1 }) {
                     />
                 </button>
             </figure>
-            {isModalOpen && <Modal photo={photo} onClose={() => setIsModalOpen(false)} />}
         </>
     );
 }
