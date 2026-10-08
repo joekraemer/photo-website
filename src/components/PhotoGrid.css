@@ -3,13 +3,16 @@
     margin-bottom: 20px;
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: center;
     padding: 0px;
     gap: 1.5em;
 }
 
+/* Every photo gets one slot's width (a third for verticals, half for
+   horizontals), so a short last row keeps the same photo size, centred. */
 .photo__figure {
-    flex: 4;
+    flex: 0 1 calc((100% - (var(--slots, 1) - 1) * 1.5em) / var(--slots, 1));
+    min-width: 0;
     margin: 0;
 }
 
@@ -32,6 +35,7 @@
     }
 
     .photo__figure {
+        flex: none;
         width: 100%;
         /* Photos take full width of the container */
     }

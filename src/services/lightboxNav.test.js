@@ -1,4 +1,4 @@
-import { buildRows, pageKey, stepIndex, swipeDirection, SWIPE_MIN_PX } from './lightboxNav';
+import { buildRows, pageKey, rowSlots, stepIndex, swipeDirection, SWIPE_MIN_PX } from './lightboxNav';
 
 const v = (id) => ({ id, aspect: 0.66 });
 const h = (id) => ({ id, aspect: 1.5 });
@@ -20,6 +20,14 @@ describe('buildRows', () => {
 
     test('missing aspect counts as horizontal', () => {
         expect(buildRows([{ id: 'x' }])).toEqual([[{ id: 'x' }]]);
+    });
+});
+
+describe('rowSlots', () => {
+    test('a short vertical row keeps three slots, a short horizontal row two', () => {
+        expect(rowSlots([v('v1')])).toBe(3);
+        expect(rowSlots([v('v1'), v('v2')])).toBe(3);
+        expect(rowSlots([h('h1')])).toBe(2);
     });
 });
 
