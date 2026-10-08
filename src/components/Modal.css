@@ -67,19 +67,32 @@
     color: #000;
 }
 
-/* Caption sits on the dark backdrop just under the white frame, so the frame
-   keeps an even border on all four sides. Absolutely positioned so it adds no
-   height to the frame and the frame stays centred on screen. */
+/* Caption sits inside the white frame's bottom border, under the photo, on one
+   line. It is positioned in the border itself (2rem tall, the frame's padding)
+   rather than adding height, so the border stays even on all four sides. When
+   the frame is too narrow for the full line, Modal.jsx swaps in the version
+   without the lens; anything still too long is cut with an ellipsis. */
 .exif__data {
     position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    line-height: 1.4;
-    margin-top: 0.75em;
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.75);
+    left: 2rem;
+    right: 2rem;
+    bottom: 0;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
+    font-size: 0.75rem;
+    color: #555;
     text-align: center;
+}
+
+.exif__data p {
+    margin: 0;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .exif__data p {
@@ -131,7 +144,7 @@
 
 /* Phones: a thin, even white frame so the photo gets most of the screen. The
    close button moves onto the backdrop just above the frame's top-right
-   corner, and the caption wraps to the frame's width below it. */
+   corner, and the camera settings are hidden: the thin border has no room. */
 @media (max-width: 730px) {
     .modal-content {
         padding: 0.5em;
@@ -139,7 +152,7 @@
 
     .modal-img {
         --max-w: calc(100vw - 1em);
-        --max-h: 72vh;
+        --max-h: 80vh;
     }
 
     .modal-button {
@@ -157,6 +170,6 @@
     }
 
     .exif__data {
-        margin-top: 0.5em;
+        display: none;
     }
 }

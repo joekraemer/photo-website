@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { exifLine, placeholderProps } from '../services/photoService';
 import { swipeDirection } from '../services/lightboxNav';
 import './Modal.css';
@@ -9,6 +9,24 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
     const closeRef = useRef(null);
     const dialogRef = useRef(null);
     const touchStart = useRef(null);
+    const exifRef = useRef(null);
+    const [exifTooWide, setExifTooWide] = useState(false);
+
+    // The caption has one line in the frame's bottom border. If the full line
+    // doesn't fit the frame's width, fall back to the line without the lens.
+    // Re-measured per photo and on window resize.
+    useLayoutEffect(() => {
+        const measure = () => {
+            setExifTooWide(false);
+            requestAnimationFrame(() => {
+                const el = exifRef.current;
+                if (el) setExifTooWide(el.scrollWidth > el.clientWidth + 1);
+            });
+        };
+        measure();
+        window.addEventListener('resize', measure);
+        return () => window.removeEventListener('resize', measure);
+    }, [photo.id]);
 
     // Move focus into the dialog and give it back to the opener on close.
     useEffect(() => {
@@ -67,6 +85,8 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
     };
 
     const exif = exifLine(photo.exif);
+    // Same line without the lens, for frames too narrow to fit the full one.
+    const exifShort = photo.exif ? exifLine({ ...photo.exif, lens: null }) : '';
     const placeholder = placeholderProps(photo);
     const boxStyle = photo.width && photo.height
         ? { '--aspect': photo.width / photo.height, '--natural-w': `${photo.width}px` }
@@ -109,7 +129,7 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
                 )}
                 {exif && (
                     <div className="exif__data">
-                        <p>{exif}</p>
+                        <p ref={exifRef} title={exif}>{exifTooWide && exifShort ? exifShort : exif}</p>
                     </div>
                 )}
             </div>
