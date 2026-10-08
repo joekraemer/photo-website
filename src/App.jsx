@@ -23,6 +23,8 @@ function App() {
             <Route path="/photos" element={<PhotosPage />} />
             {/* Albums come from photos.json */}
             <Route path="/photos/:slug" element={<AlbumPage />} />
+            {/* Shareable link: the album with the lightbox open on one photo */}
+            <Route path="/photos/:slug/:photoId" element={<AlbumPage />} />
             <Route path="/videos" element={<Videos />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="*" element={<NotFound />} />
