@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import io
 import math
@@ -225,19 +226,124 @@ def open_image(source) -> Image.Image:
     return img
 
 
+def _small_srgb(source) -> Image.Image:
+    """The photo as a small sRGB image for the loading placeholders. A JPEG is
+    decoded at 1/8 scale, so this is cheap even when the sync reuses renders."""
+    img = open_image(source)
+    if img.format == "JPEG":
+        img.draft("RGB", (THUMBHASH_INPUT * 2, THUMBHASH_INPUT * 2))
+    return _to_srgb(img).convert("RGB")
+
+
+def _color_of(rgb: Image.Image) -> str:
+    r, g, b = rgb.resize((1, 1), Image.Resampling.BOX).getpixel((0, 0))[:3]
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
 def average_color(source) -> str | None:
     """The photo's average sRGB colour as '#rrggbb', for the site's loading
-    placeholder. A JPEG is decoded at 1/8 scale, so this is cheap even when the
-    sync reuses existing renders. Returns None if the image can't be read."""
+    placeholder. Returns None if the image can't be read."""
+    return placeholders(source).get("color")
+
+
+def placeholders(source) -> dict:
+    """Both loading placeholders from one small decode: the average colour
+    ('color', '#rrggbb') and a ThumbHash blurred preview ('thumbhash', base64).
+    A key is left out if it can't be computed; this never raises."""
     try:
-        img = open_image(source)
-        if img.format == "JPEG":
-            img.draft("RGB", (64, 64))
-        rgb = _to_srgb(img)
-        r, g, b = rgb.resize((1, 1), Image.Resampling.BOX).getpixel((0, 0))[:3]
-    except Exception:  # noqa: BLE001 - a missing colour must never fail a sync
-        return None
-    return f"#{r:02x}{g:02x}{b:02x}"
+        rgb = _small_srgb(source)
+    except Exception:  # noqa: BLE001 - missing placeholders must never fail a sync
+        return {}
+    out = {}
+    try:
+        out["color"] = _color_of(rgb)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        out["thumbhash"] = _thumbhash_of(rgb)
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
+THUMBHASH_INPUT = 32  # ThumbHash keeps at most 7 frequencies, so 32px is plenty
+
+
+def _js_round(x: float) -> int:
+    # The reference encoder uses Math.round (half up); Python's round() is
+    # half-to-even, which would flip some bits.
+    return math.floor(x + 0.5)
+
+
+def _thumbhash_rgb(w: int, h: int, pixels) -> bytes:
+    """Port of Evan Wallace's rgbaToThumbHash (MIT) for fully opaque RGB pixels.
+    https://github.com/evanw/thumbhash - the site decodes it with the same
+    project's npm package, so the two must stay byte-for-byte compatible."""
+    n = w * h
+    l, p, q = [0.0] * n, [0.0] * n, [0.0] * n
+    inv = 1 / 255  # the reference computes alpha / 255 * v, i.e. (1/255) * v
+    for i, (r, g, b) in enumerate(pixels):
+        r, g, b = inv * r, inv * g, inv * b
+        l[i] = (r + g + b) / 3
+        p[i] = (r + g) / 2 - b
+        q[i] = r - g
+    lx = max(1, _js_round(7 * w / max(w, h)))
+    ly = max(1, _js_round(7 * h / max(w, h)))
+
+    def channel(values, nx, ny):
+        # Same summation order and multiplication grouping as the reference,
+        # so floating-point rounding (and therefore every bit) matches it.
+        fxs = [[math.cos(math.pi / w * cx * (x + 0.5)) for x in range(w)] for cx in range(nx)]
+        dc, ac, scale = 0.0, [], 0.0
+        for cy in range(ny):
+            fy = [math.cos(math.pi / h * cy * (y + 0.5)) for y in range(h)]
+            cx = 0
+            while cx * ny < nx * (ny - cy):
+                fx = fxs[cx]
+                f = 0.0
+                for y in range(h):
+                    row, c = y * w, fy[y]
+                    for x in range(w):
+                        f += values[row + x] * fx[x] * c
+                f /= n
+                if cx or cy:
+                    ac.append(f)
+                    scale = max(scale, abs(f))
+                else:
+                    dc = f
+                cx += 1
+        if scale:
+            ac = [0.5 + 0.5 / scale * f for f in ac]
+        return dc, ac, scale
+
+    l_dc, l_ac, l_scale = channel(l, max(3, lx), max(3, ly))
+    p_dc, p_ac, p_scale = channel(p, 3, 3)
+    q_dc, q_ac, q_scale = channel(q, 3, 3)
+    landscape = w > h
+    header24 = (_js_round(63 * l_dc) | (_js_round(31.5 + 31.5 * p_dc) << 6)
+                | (_js_round(31.5 + 31.5 * q_dc) << 12) | (_js_round(31 * l_scale) << 18))
+    header16 = ((ly if landscape else lx) | (_js_round(63 * p_scale) << 3)
+                | (_js_round(63 * q_scale) << 9) | (int(landscape) << 15))
+    out = [header24 & 255, (header24 >> 8) & 255, header24 >> 16, header16 & 255, header16 >> 8]
+    for index, f in enumerate(l_ac + p_ac + q_ac):
+        if index % 2 == 0:
+            out.append(0)
+        out[-1] |= _js_round(15 * f) << ((index & 1) << 2)
+    return bytes(out)
+
+
+def _thumbhash_of(rgb: Image.Image) -> str:
+    small = rgb.copy()
+    small.thumbnail((THUMBHASH_INPUT, THUMBHASH_INPUT), Image.Resampling.BOX)
+    flat = small.tobytes()
+    pixels = [tuple(flat[i:i + 3]) for i in range(0, len(flat), 3)]
+    return base64.b64encode(_thumbhash_rgb(small.width, small.height, pixels)).decode("ascii")
+
+
+def thumbhash(source) -> str | None:
+    """A ~23-byte blurred preview of the photo (ThumbHash, base64), which the
+    site decodes into its loading placeholder. None if unreadable."""
+    return placeholders(source).get("thumbhash")
 
 
 def fit_size(width: int, height: int, long_edge: int) -> tuple[int, int]:

@@ -4,6 +4,8 @@
 // S3-style URL). When unset, the app falls back to the local dev output in
 // public/local-photos/.
 
+import { thumbHashToDataURL } from 'thumbhash';
+
 const DEFAULT_BASE = `${import.meta.env.BASE_URL}local-photos`;
 
 export const PHOTOS_BASE_URL = (import.meta.env.VITE_PHOTOS_BASE_URL || DEFAULT_BASE).replace(/\/+$/, '');
@@ -82,16 +84,48 @@ export function normalizeManifest(manifest) {
 }
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+const THUMBHASH = /^[A-Za-z0-9+/]{6,64}={0,2}$/;
+const blurCache = new Map();
 
-// Props that paint an image's average colour (photo.color from photo-sync)
-// while it loads, then clear it so it can't show around a letterboxed photo.
-// Photos without a valid colour get no props and load as before.
+// Decodes a ThumbHash (photo.thumbhash from photo-sync, ~23 bytes of base64)
+// into a tiny blurred PNG data URL. Cached, since a photo's preview is
+// needed again by the grid, the lightbox and the album cover.
+export function blurDataUrl(hash) {
+    if (!isText(hash) || !THUMBHASH.test(hash)) return null;
+    if (!blurCache.has(hash)) {
+        let url = null;
+        try {
+            url = thumbHashToDataURL(Uint8Array.from(atob(hash), (c) => c.charCodeAt(0)));
+        } catch {
+            url = null; // a corrupt hash just falls back to the colour
+        }
+        blurCache.set(hash, url);
+    }
+    return blurCache.get(hash);
+}
+
+// Props that paint a blurred preview (photo.thumbhash) over the photo's
+// average colour (photo.color) while it loads, then clear both so they can't
+// show around a letterboxed photo. Either one alone still works, and photos
+// with neither get no props and load as before.
 export function placeholderProps(photo) {
-    const color = photo && photo.color;
-    if (!isText(color) || !HEX_COLOR.test(color)) return {};
+    const color = photo && isText(photo.color) && HEX_COLOR.test(photo.color) ? photo.color : null;
+    const blur = photo ? blurDataUrl(photo.thumbhash) : null;
+    if (!color && !blur) return {};
+    const style = {};
+    if (color) style.backgroundColor = color;
+    if (blur) {
+        style.backgroundImage = `url("${blur}")`;
+        style.backgroundSize = 'cover';
+        style.backgroundPosition = 'center';
+    }
     return {
-        style: { backgroundColor: color },
-        onLoad: (event) => { event.currentTarget.style.backgroundColor = ''; },
+        style,
+        onLoad: (event) => {
+            const s = event.currentTarget.style;
+            s.backgroundColor = '';
+            s.backgroundImage = '';
+        },
     };
 }
 

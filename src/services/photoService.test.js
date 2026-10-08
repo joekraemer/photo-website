@@ -1,4 +1,4 @@
-import { exifLine, normalizeManifest, placeholderProps } from './photoService';
+import { blurDataUrl, exifLine, normalizeManifest, placeholderProps } from './photoService';
 
 const goodPhoto = (id) => ({
     id,
@@ -70,5 +70,30 @@ describe('placeholderProps', () => {
         expect(placeholderProps({})).toEqual({});
         expect(placeholderProps({ color: 'red; background:url(x)' })).toEqual({});
         expect(placeholderProps(null)).toEqual({});
+    });
+
+    it('paints a ThumbHash blur over the colour and clears both on load', () => {
+        const hash = '4hcODgZ3ePd4iMiIh3p4eWeHvHAAmGc='; // a real sample photo
+        const props = placeholderProps({ color: '#3a5f7d', thumbhash: hash });
+        expect(props.style.backgroundColor).toBe('#3a5f7d');
+        expect(props.style.backgroundImage).toMatch(/^url\("data:image\/png;base64,/);
+        expect(props.style.backgroundSize).toBe('cover');
+        const img = { style: { ...props.style } };
+        props.onLoad({ currentTarget: img });
+        expect(img.style.backgroundColor).toBe('');
+        expect(img.style.backgroundImage).toBe('');
+    });
+
+    it('uses the blur alone when there is no colour', () => {
+        const props = placeholderProps({ thumbhash: '4hcODgZ3ePd4iMiIh3p4eWeHvHAAmGc=' });
+        expect(props.style.backgroundColor).toBeUndefined();
+        expect(props.style.backgroundImage).toMatch(/^url\("data:image\/png/);
+    });
+
+    it('ignores a malformed ThumbHash and keeps the colour', () => {
+        expect(placeholderProps({ color: '#3a5f7d', thumbhash: 'x") ; evil' }).style)
+            .toEqual({ backgroundColor: '#3a5f7d' });
+        expect(blurDataUrl('not base64!')).toBeNull();
+        expect(blurDataUrl(42)).toBeNull();
     });
 });
