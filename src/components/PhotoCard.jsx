@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router';
-import { formatAlbumDate } from '../services/photoService';
+import { formatAlbumDate, placeholderProps } from '../services/photoService';
 import './PhotoCard.css';
 
 // The card slot is 100vw on phones, 300px on tablets and 226px on desktop
@@ -42,6 +42,7 @@ function PhotoCard({ album }) {
                             height={cover.height}
                             loading="lazy"
                             decoding="async"
+                            {...placeholderProps(cover)}
                         />
                     )}
                 </figure>

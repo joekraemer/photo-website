@@ -1,4 +1,5 @@
 import React from 'react';
+import { placeholderProps } from '../services/photoService';
 
 // Grid layout numbers from App.css (.main__container) and PhotoGrid.css (.photo-row).
 const PAGE_PADDING_PX = 96;   // 3em each side
@@ -47,6 +48,7 @@ function Photo({ photo, variant = 'thumb', perRow = 1, onOpen, buttonRef }) {
                         loading="lazy"
                         decoding="async"
                         {...imgProps}
+                        {...placeholderProps(photo)}
                     />
                 </button>
             </figure>

@@ -81,6 +81,20 @@ export function normalizeManifest(manifest) {
     return { ...source, albums };
 }
 
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+// Props that paint an image's average colour (photo.color from photo-sync)
+// while it loads, then clear it so it can't show around a letterboxed photo.
+// Photos without a valid colour get no props and load as before.
+export function placeholderProps(photo) {
+    const color = photo && photo.color;
+    if (!isText(color) || !HEX_COLOR.test(color)) return {};
+    return {
+        style: { backgroundColor: color },
+        onLoad: (event) => { event.currentTarget.style.backgroundColor = ''; },
+    };
+}
+
 export function exifLine(exif) {
     if (!exif) return '';
     return [

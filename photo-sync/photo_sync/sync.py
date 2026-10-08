@@ -378,6 +378,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
 
             if cover_key and archive.name_key(src.name) == cover_key:
                 cover_id = photo_id
+            color = imaging.average_color(io.BytesIO(raw))
             photos.append({
                 "id": photo_id,
                 "alt": description or f"{title} — {src.stem}",
@@ -385,6 +386,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
                 "height": height,
                 "aspect": round(width / height, 4) if height else None,
                 "sizes": dict(keys),
+                **({"color": color} if color else {}),
                 "exif": exif,
                 "_name": src.name,
                 "_rating": imaging.read_rating(raw) or 0,
