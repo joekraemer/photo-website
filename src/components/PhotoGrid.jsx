@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Photo from './Photo';
 import Modal from './Modal';
 import { buildRows, rowSlots, stepIndex } from '../services/lightboxNav';
+import { loadedImageSrc } from '../services/photoService';
 import './PhotoGrid.css';
 
 // The grid owns the lightbox so it can move between photos in the order they
@@ -71,6 +72,7 @@ function PhotoGrid({ photos, variant = 'thumb', openId, onOpenChange }) {
             {openIndex !== null && ordered[openIndex] && (
                 <Modal
                     photo={ordered[openIndex]}
+                    previewSrc={loadedImageSrc(buttons.current[openIndex] && buttons.current[openIndex].querySelector('img'))}
                     prevPhoto={ordered[openIndex - 1]}
                     nextPhoto={ordered[openIndex + 1]}
                     onPrev={() => go(-1)}

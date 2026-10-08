@@ -1,4 +1,4 @@
-import { exifLine, normalizeManifest, placeholderProps } from './photoService';
+import { exifLine, loadedImageSrc, normalizeManifest, placeholderProps } from './photoService';
 
 const goodPhoto = (id) => ({
     id,
@@ -70,5 +70,21 @@ describe('placeholderProps', () => {
         expect(placeholderProps({})).toEqual({});
         expect(placeholderProps({ color: 'red; background:url(x)' })).toEqual({});
         expect(placeholderProps(null)).toEqual({});
+    });
+});
+
+describe('loadedImageSrc', () => {
+    it('returns the URL the browser picked once the image has loaded', () => {
+        expect(loadedImageSrc({ complete: true, naturalWidth: 500, currentSrc: 'm.jpg', src: 't.jpg' })).toBe('m.jpg');
+    });
+
+    it('falls back to src when currentSrc is empty', () => {
+        expect(loadedImageSrc({ complete: true, naturalWidth: 500, currentSrc: '', src: 't.jpg' })).toBe('t.jpg');
+    });
+
+    it('returns null for images that are not loaded or are broken', () => {
+        expect(loadedImageSrc(null)).toBeNull();
+        expect(loadedImageSrc({ complete: false, naturalWidth: 0, currentSrc: 't.jpg' })).toBeNull();
+        expect(loadedImageSrc({ complete: true, naturalWidth: 0, currentSrc: 't.jpg' })).toBeNull();
     });
 });

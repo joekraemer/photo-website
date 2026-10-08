@@ -12,13 +12,30 @@
 }
 
 .modal-content {
+    --frame: 2em;
     position: relative;
     line-height: 0;
     box-sizing: border-box;
     background: white;
-    padding: 2em;
+    padding: var(--frame);
     border-radius: 0.5em;
     box-shadow: 0 0 0px rgba(0, 0, 0, 0.2);
+}
+
+/* The grid's smaller copy, already downloaded, drawn in the photo's box under
+   the large image so opening a photo shows it at once. The large image is
+   drawn on top as it arrives; Modal.jsx removes this once it has loaded. */
+.modal-preview {
+    position: absolute;
+    top: var(--frame);
+    left: var(--frame);
+    width: calc(100% - 2 * var(--frame));
+    height: calc(100% - 2 * var(--frame));
+    display: block;
+}
+
+.modal-img {
+    position: relative;
 }
 
 /* The photo's box is sized from its known dimensions (--aspect, --natural-w
@@ -147,7 +164,7 @@
    corner, and the camera settings are hidden: the thin border has no room. */
 @media (max-width: 730px) {
     .modal-content {
-        padding: 0.5em;
+        --frame: 0.5em;
     }
 
     .modal-img {

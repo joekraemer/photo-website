@@ -95,6 +95,14 @@ export function placeholderProps(photo) {
     };
 }
 
+// The URL an <img> is already showing, or null if it hasn't finished loading
+// (e.g. a lazy grid photo that is still off-screen). Used to show the grid's
+// copy in the lightbox at once, without starting a new download.
+export function loadedImageSrc(img) {
+    if (!img || !img.complete || !(img.naturalWidth > 0)) return null;
+    return img.currentSrc || img.src || null;
+}
+
 export function exifLine(exif) {
     if (!exif) return '';
     return [

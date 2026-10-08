@@ -5,8 +5,12 @@ import './Modal.css';
 
 // Full-screen lightbox: the watermarked large size plus its EXIF.
 // Left/Right arrows and horizontal swipes move to prevPhoto/nextPhoto.
-function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
+// previewSrc is the grid's already-downloaded copy of this photo, if any. It is
+// drawn underneath at once and removed when the large image has loaded.
+function Modal({ photo, previewSrc, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
     const closeRef = useRef(null);
+    const [loadedId, setLoadedId] = useState(null);
+    const showPreview = Boolean(previewSrc) && loadedId !== photo.id;
     const dialogRef = useRef(null);
     const touchStart = useRef(null);
     const exifRef = useRef(null);
@@ -87,7 +91,13 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
     const exif = exifLine(photo.exif);
     // Same line without the lens, for frames too narrow to fit the full one.
     const exifShort = photo.exif ? exifLine({ ...photo.exif, lens: null }) : '';
-    const placeholder = placeholderProps(photo);
+    // With a preview underneath, the large image stays transparent while it
+    // loads so the preview shows through; otherwise it shows the colour.
+    const placeholder = previewSrc ? {} : placeholderProps(photo);
+    const onLargeLoad = (event) => {
+        if (placeholder.onLoad) placeholder.onLoad(event);
+        setLoadedId(photo.id);
+    };
     const boxStyle = photo.width && photo.height
         ? { '--aspect': photo.width / photo.height, '--natural-w': `${photo.width}px` }
         : {};
@@ -104,6 +114,15 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
             onTouchEnd={onTouchEnd}
         >
             <div className="modal-content">
+                {showPreview && (
+                    <img
+                        key={`preview-${photo.id}`}
+                        className="modal-preview"
+                        src={previewSrc}
+                        alt=""
+                        aria-hidden="true"
+                    />
+                )}
                 <img
                     key={photo.id}
                     className="modal-img"
@@ -112,6 +131,7 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
                     width={photo.width}
                     height={photo.height}
                     {...placeholder}
+                    onLoad={onLargeLoad}
                     style={{ ...placeholder.style, ...boxStyle }}
                 />
                 <button type="button" className="modal-button" onClick={onClose} aria-label="Close" ref={closeRef}>
