@@ -35,3 +35,25 @@
 .bold-name {
     font-weight: bold;
 }
+/* Phones: photo full width on top, text below. */
+@media (max-width: 730px) {
+    .hero__section__container {
+        flex-flow: column;
+        align-items: stretch;
+        max-height: none;
+    }
+
+    .hero__section__figure,
+    .hero__section__text {
+        flex: none;
+        width: 100%;
+    }
+
+    .hero__section__img {
+        max-height: none;
+    }
+
+    .hero__section__text {
+        margin: 0;
+    }
+}

@@ -84,7 +84,9 @@ export function normalizeManifest(manifest) {
 export function exifLine(exif) {
     if (!exif) return '';
     return [
-        exif.camera,
+        // body_name is the friendly camera name (e.g. "Sony α6400") when
+        // photo-sync knows it; otherwise the raw EXIF model (e.g. "ILCE-6400").
+        exif.body_name || exif.camera,
         exif.lens,
         exif.focal_length,
         exif.aperture,

@@ -26,8 +26,15 @@
 .photo__card img {
     display: block;
     object-fit: cover;
+    object-position: center;
     height: 100%;
     width: 100%;
+}
+
+/* Every album cover is a vertical 2:3 crop, whatever the cover photo's shape. */
+.photo__card figure {
+    aspect-ratio: 2 / 3;
+    height: auto;
 }
 
 .photo__card__title {

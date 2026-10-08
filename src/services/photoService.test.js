@@ -1,4 +1,4 @@
-import { normalizeManifest } from './photoService';
+import { exifLine, normalizeManifest } from './photoService';
 
 const goodPhoto = (id) => ({
     id,
@@ -44,5 +44,15 @@ describe('normalizeManifest', () => {
     it('treats a manifest without an albums list as empty', () => {
         expect(normalizeManifest({}).albums).toEqual([]);
         expect(normalizeManifest(null).albums).toEqual([]);
+    });
+});
+
+describe('exifLine', () => {
+    it('prefers the friendly body_name over the raw camera model', () => {
+        expect(exifLine({ camera: 'ILCE-6400', body_name: 'Sony α6400', iso: 100 })).toBe('Sony α6400 · ISO 100');
+    });
+
+    it('falls back to the raw camera model', () => {
+        expect(exifLine({ camera: 'ILCE-6400', aperture: 'f/4' })).toBe('ILCE-6400 · f/4');
     });
 });
