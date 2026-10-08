@@ -91,6 +91,16 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
                 <button type="button" className="modal-button" onClick={onClose} aria-label="Close" ref={closeRef}>
                     <i className="fas fa-times" aria-hidden="true" />
                 </button>
+                {prevPhoto && (
+                    <button type="button" className="modal-arrow modal-arrow--prev" onClick={onPrev} aria-label="Previous photo">
+                        <i className="fas fa-chevron-left" aria-hidden="true" />
+                    </button>
+                )}
+                {nextPhoto && (
+                    <button type="button" className="modal-arrow modal-arrow--next" onClick={onNext} aria-label="Next photo">
+                        <i className="fas fa-chevron-right" aria-hidden="true" />
+                    </button>
+                )}
                 {exif && (
                     <div className="exif__data">
                         <p>{exif}</p>
