@@ -12,7 +12,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from PIL import Image, ImageCms, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageCms, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 from .cameras import camera_name
 
@@ -178,24 +178,27 @@ def _font(size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(str(FONT_PATH), size)
 
 
-def watermark(img: Image.Image, text: str, opacity: float) -> Image.Image:
-    if not text or opacity <= 0:
+def watermark(img: Image.Image, text: str, opacity: float, size_factor: float = 0.07) -> Image.Image:
+    """White text in the bottom-right corner, `size_factor` x the short side tall,
+    over a blurred dark halo so it stays readable on busy texture."""
+    if not text or opacity <= 0 or size_factor <= 0:
         return img
     w, h = img.size
-    size = max(12, round(min(w, h) * 0.022))
+    size = max(12, round(min(w, h) * size_factor))
     font = _font(size)
-    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(layer)
-    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    left, top, right, bottom = probe.textbbox((0, 0), text, font=font)
     margin = max(8, round(min(w, h) * 0.02))
     x = w - (right - left) - margin - left
     y = h - (bottom - top) - margin - top
-    alpha = round(255 * opacity)
-    # Faint shadow keeps the mark legible on light skies without being loud.
-    shadow = max(1, size // 16)
-    draw.text((x + shadow, y + shadow), text, font=font, fill=(0, 0, 0, round(alpha * 0.6)))
-    draw.text((x, y), text, font=font, fill=(255, 255, 255, alpha))
-    return Image.alpha_composite(img.convert("RGBA"), layer).convert("RGB")
+    base = img.convert("RGBA")
+    # Soft shadow: the text in black, nudged down slightly and blurred.
+    halo = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(halo).text((x, y + max(1, size // 24)), text, font=font, fill=(0, 0, 0, 150))
+    base = Image.alpha_composite(base, halo.filter(ImageFilter.GaussianBlur(max(2, size // 10))))
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(layer).text((x, y), text, font=font, fill=(255, 255, 255, round(255 * opacity)))
+    return Image.alpha_composite(base, layer).convert("RGB")
 
 
 def open_image(source) -> Image.Image:
@@ -287,12 +290,13 @@ def prepare(img: Image.Image) -> Image.Image:
     return clean
 
 
-def render(base: Image.Image, long_edge: int, wm_text: str | None = None, wm_opacity: float = 0.0) -> Rendered:
+def render(base: Image.Image, long_edge: int, wm_text: str | None = None, wm_opacity: float = 0.0,
+           wm_size: float = 0.07) -> Rendered:
     img = base.copy()
     if max(img.size) > long_edge:  # never upscale
         img.thumbnail((long_edge, long_edge), Image.Resampling.LANCZOS)
     if wm_text:
-        img = watermark(img, wm_text, wm_opacity)
+        img = watermark(img, wm_text, wm_opacity, wm_size)
     buf = io.BytesIO()
     img.save(buf, "WEBP", quality=WEBP_QUALITY, method=6, exif=b"", icc_profile=None)
     return Rendered(buf.getvalue(), img.width, img.height)

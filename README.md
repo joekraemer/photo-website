@@ -45,7 +45,9 @@ What `photo-sync` does with each shoot:
   `ILCE-6400`) and adds `body_name` (e.g. `Sony α6400`).
 - **Watermark** is drawn with the bundled TeX Gyre Heros font
   (`photo-sync/photo_sync/fonts/`), so it looks the same on a Mac and in the
-  container.
+  container. It is white at `WATERMARK_OPACITY` (default 0.55) over a soft
+  dark shadow, and `WATERMARK_SIZE` (default 0.07) of the photo's short side
+  tall. Changing either re-renders every large image on the next sync.
 - **album.md mistakes.** A wrong value or unknown key in `album.md` is a
   warning and that field is ignored. Only an `album.md` that can't be read at
   all (broken YAML) is an error, and that album stays off the site until fixed.

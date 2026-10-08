@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_WATERMARK = "@jak_creative_"
-DEFAULT_OPACITY = 0.4
+DEFAULT_OPACITY = 0.55
+# Watermark text height as a fraction of the photo's short side.
+DEFAULT_WATERMARK_SIZE = 0.07
 # Files in _web/ changed less than this many seconds ago are skipped for this
 # run (Lightroom may still be writing them). PHOTO_SETTLE_SECONDS overrides.
 DEFAULT_SETTLE_SECONDS = 60
@@ -64,6 +66,7 @@ class Config:
     public_base_url: str = ""
     watermark_text: str = DEFAULT_WATERMARK
     watermark_opacity: float = DEFAULT_OPACITY
+    watermark_size: float = DEFAULT_WATERMARK_SIZE
     # Safety switches for unattended runs; see sync.SENTINEL / sync.shrink_reason.
     require_sentinel: bool = False
     allow_shrink: bool = False
@@ -106,6 +109,13 @@ class Config:
             raise ConfigError("WATERMARK_OPACITY must be between 0 and 1")
 
         try:
+            wm_size = float(get("WATERMARK_SIZE", str(DEFAULT_WATERMARK_SIZE)))
+        except ValueError as exc:
+            raise ConfigError("WATERMARK_SIZE must be a number") from exc
+        if not 0.0 < wm_size <= 0.25:
+            raise ConfigError("WATERMARK_SIZE must be above 0 and at most 0.25")
+
+        try:
             settle = float(get("PHOTO_SETTLE_SECONDS", str(DEFAULT_SETTLE_SECONDS)))
         except ValueError as exc:
             raise ConfigError("PHOTO_SETTLE_SECONDS must be a number") from exc
@@ -124,6 +134,7 @@ class Config:
             public_base_url=(get("PUBLIC_BASE_URL", "") or "").rstrip("/"),
             watermark_text=get("WATERMARK_TEXT", DEFAULT_WATERMARK) or "",
             watermark_opacity=opacity,
+            watermark_size=wm_size,
             require_sentinel=_flag(get("PHOTO_REQUIRE_SENTINEL")),
             allow_shrink=_flag(get("PHOTO_ALLOW_SHRINK")),
             settle_seconds=settle,

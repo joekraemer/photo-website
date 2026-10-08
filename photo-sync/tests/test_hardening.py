@@ -11,7 +11,7 @@ from PIL import Image, ImageFont
 
 from photo_sync import archive, cameras, imaging, sync
 from photo_sync.cli import main, run_lock
-from photo_sync.config import Config
+from photo_sync.config import Config, ConfigError
 from photo_sync.sample_archive import build, make_jpeg
 from photo_sync.targets import LocalTarget
 
@@ -59,9 +59,29 @@ def test_font_hash_is_in_render_fingerprint(tmp_path, monkeypatch):
 
 
 def test_watermark_draws_bottom_right():
-    img = imaging.watermark(Image.new("RGB", (2560, 1707), (0, 0, 0)), "@jak_creative_", 0.4)
+    img = imaging.watermark(Image.new("RGB", (2560, 1707), (0, 0, 0)), "@jak_creative_", 0.55)
     bbox = img.point(lambda v: 255 if v > 20 else 0).getbbox()
-    assert bbox and bbox[0] > 2560 * 0.6 and bbox[1] > 1707 * 0.85
+    assert bbox and bbox[0] > 2560 * 0.4 and bbox[1] > 1707 * 0.8
+
+
+def test_watermark_size_scales_with_short_side():
+    def text_height(factor):
+        img = imaging.watermark(Image.new("RGB", (2560, 1707), (0, 0, 0)), "@jak_creative_", 1.0, factor)
+        bbox = img.point(lambda v: 255 if v > 128 else 0).getbbox()
+        return bbox[3] - bbox[1]
+    small, big = text_height(0.022), text_height(0.07)
+    assert 2.5 < big / small < 3.8  # glyph extents, not exactly the font size ratio
+
+
+def test_watermark_soft_shadow_darkens_around_text():
+    img = imaging.watermark(Image.new("RGB", (2560, 1707), (200, 200, 200)), "@jak_creative_", 0.55)
+    assert img.convert("L").getextrema()[0] < 150  # halo is darker than the grey background
+
+
+@pytest.mark.parametrize("bad", ["0", "-0.1", "0.5", "big"])
+def test_watermark_size_validated(tmp_path, bad):
+    with pytest.raises(ConfigError, match="WATERMARK_SIZE"):
+        Config.from_env({"PHOTO_SOURCE_ROOT": str(tmp_path), "WATERMARK_SIZE": bad}, require_target=False)
 
 
 # --- run lock -----------------------------------------------------------------
