@@ -86,7 +86,7 @@ export function exifLine(exif) {
     return [
         // body_name is the friendly camera name (e.g. "Sony α6400") when
         // photo-sync knows it; otherwise the raw EXIF model (e.g. "ILCE-6400").
-        exif.body_name || exif.camera || exif.body,
+        exif.body_name || exif.camera,
         exif.lens,
         exif.focal_length,
         exif.aperture,
