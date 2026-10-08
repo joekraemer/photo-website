@@ -1,7 +1,10 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { exifLine, placeholderProps } from '../services/photoService';
 import { swipeDirection } from '../services/lightboxNav';
+import { prefetchImage } from '../services/prefetch';
 import './Modal.css';
+
+const SPINNER_DELAY_MS = 300;
 
 // Full-screen lightbox: the watermarked large size plus its EXIF.
 // Left/Right arrows and horizontal swipes move to prevPhoto/nextPhoto.
@@ -11,6 +14,8 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
     const touchStart = useRef(null);
     const exifRef = useRef(null);
     const [exifTooWide, setExifTooWide] = useState(false);
+    const imgRef = useRef(null);
+    const [showSpinner, setShowSpinner] = useState(false);
 
     // The caption has one line in the frame's bottom border. If the full line
     // doesn't fit the frame's width, fall back to the line without the lens.
@@ -38,9 +43,26 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
     // Fetch the neighbours' large images now so stepping to them is instant.
     useEffect(() => {
         [prevPhoto, nextPhoto].forEach((p) => {
-            if (p && p.urls && p.urls.large) new Image().src = p.urls.large;
+            if (p && p.urls) prefetchImage(p.urls.large);
         });
     }, [prevPhoto, nextPhoto]);
+
+    // A spinner over the placeholder colour, but only if the photo is still
+    // missing after SPINNER_DELAY_MS, so quick loads never flash one.
+    useEffect(() => {
+        setShowSpinner(false);
+        const img = imgRef.current;
+        if (!img || (img.complete && img.naturalWidth > 0)) return undefined;
+        const timer = setTimeout(() => setShowSpinner(true), SPINNER_DELAY_MS);
+        const done = () => { clearTimeout(timer); setShowSpinner(false); };
+        img.addEventListener('load', done);
+        img.addEventListener('error', done);
+        return () => {
+            clearTimeout(timer);
+            img.removeEventListener('load', done);
+            img.removeEventListener('error', done);
+        };
+    }, [photo.id]);
 
     // Escape closes; arrows step; Tab and Shift+Tab stay inside the dialog.
     useEffect(() => {
@@ -106,6 +128,7 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
             <div className="modal-content">
                 <img
                     key={photo.id}
+                    ref={imgRef}
                     className="modal-img"
                     src={photo.urls.large}
                     alt={photo.alt}
@@ -114,6 +137,12 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
                     {...placeholder}
                     style={{ ...placeholder.style, ...boxStyle }}
                 />
+                {showSpinner && (
+                    <div className="modal-spinner" role="status">
+                        <span className="modal-spinner__ring" aria-hidden="true" />
+                        <span className="visually-hidden">Loading photo</span>
+                    </div>
+                )}
                 <button type="button" className="modal-button" onClick={onClose} aria-label="Close" ref={closeRef}>
                     <i className="fas fa-times" aria-hidden="true" />
                 </button>

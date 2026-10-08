@@ -48,7 +48,7 @@
     }
 }
 .photo__figure {
-    cursor: zoom-in;
+    cursor: pointer;
 }
 
 /* The photo is a button for keyboard users; strip the browser button look. */
