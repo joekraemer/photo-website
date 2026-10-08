@@ -78,6 +78,49 @@
     height: auto;
 }
 
+/* Previous/next arrows: white chevrons on the dark backdrop beside the white
+   frame, vertically centred on it. */
+.modal-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3em;
+    height: 5em;
+    border: none;
+    padding: 0;
+    margin: 0;
+    line-height: 0;
+    font: inherit;
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    background: transparent;
+}
+.modal-arrow--prev { left: -3.5em; }
+.modal-arrow--next { right: -3.5em; }
+
+.modal-arrow:hover,
+.modal-arrow:focus-visible {
+    color: #fff;
+}
+
+/* Phones and touch screens swipe instead; there is no room beside the frame. */
+@media (hover: none) and (pointer: coarse), (max-width: 730px) {
+    .modal-arrow { display: none; }
+}
+
+/* Where the arrows show, keep enough backdrop on each side for them (84px out
+   from the frame, plus a margin). Only narrow desktop windows notice; at 1280px
+   and wider 80vw is already the smaller limit. */
+@media (hover: hover) and (pointer: fine) and (min-width: 731px) {
+    .modal-img {
+        max-width: min(80vw, calc(100vw - 256px));
+    }
+}
+
 /* Phones: a thinner white frame so the photo gets most of the screen. The top
    keeps room for the close button; the caption stays inside the frame. */
 @media (max-width: 730px) {
