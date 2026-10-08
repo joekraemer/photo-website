@@ -37,6 +37,54 @@
     aspect-ratio: var(--aspect, auto);
 }
 
+/* Loading spinner over the placeholder colour, shown by Modal.jsx only when the
+   large photo takes longer than 300ms. The frame is symmetric, so centring on
+   it centres on the photo. White ring with a soft dark halo so it reads on
+   both light and dark placeholder colours. */
+.modal-spinner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    animation: modal-spinner-in 200ms ease-out;
+}
+
+.modal-spinner__ring {
+    width: 32px;
+    height: 32px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: rgba(255, 255, 255, 0.9);
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.35));
+    animation: modal-spinner-spin 0.9s linear infinite;
+}
+
+@keyframes modal-spinner-spin { to { transform: rotate(360deg); } }
+@keyframes modal-spinner-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Reduced motion: a slow pulse instead of spinning. */
+@media (prefers-reduced-motion: reduce) {
+    .modal-spinner__ring {
+        animation: modal-spinner-pulse 1.6s ease-in-out infinite alternate;
+    }
+}
+@keyframes modal-spinner-pulse { from { opacity: 0.4; } to { opacity: 1; } }
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 /* Small close button inside the white frame's top-right corner, clear of the photo. */
 .modal-button .fa-times {
     color: #555;

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { placeholderProps } from '../services/photoService';
+import { HOVER_INTENT_MS, prefetchImage } from '../services/prefetch';
 
 // Grid layout numbers from App.css (.main__container) and PhotoGrid.css (.photo-row).
 const PAGE_PADDING_PX = 96;   // 3em each side
@@ -24,6 +25,19 @@ export function gridSizes(perRow = 1) {
 // stretched thumb. variant="medium" (album view) also defaults src to medium.
 // Opening the lightbox is up to the grid (onOpen), which knows the neighbours.
 function Photo({ photo, variant = 'thumb', perRow = 1, onOpen, buttonRef }) {
+    const hoverTimer = useRef(null);
+    useEffect(() => () => clearTimeout(hoverTimer.current), []);
+
+    // Start the lightbox's large image when someone is about to click: mouse
+    // resting on the photo, a finger touching it, or keyboard focus.
+    const prefetchLarge = () => prefetchImage(photo.urls && photo.urls.large);
+    const onPointerEnter = (event) => {
+        if (event.pointerType !== 'mouse') return;
+        clearTimeout(hoverTimer.current);
+        hoverTimer.current = setTimeout(prefetchLarge, HOVER_INTENT_MS);
+    };
+    const onPointerLeave = () => clearTimeout(hoverTimer.current);
+
     const imgProps = {
         src: variant === 'medium' ? photo.urls.medium : photo.urls.thumb,
         srcSet: `${photo.urls.thumb} 500w, ${photo.urls.medium} 1600w`,
@@ -37,6 +51,10 @@ function Photo({ photo, variant = 'thumb', perRow = 1, onOpen, buttonRef }) {
                     type="button"
                     className="photo__button"
                     onClick={onOpen}
+                    onPointerEnter={onPointerEnter}
+                    onPointerLeave={onPointerLeave}
+                    onTouchStart={prefetchLarge}
+                    onFocus={prefetchLarge}
                     ref={buttonRef}
                     aria-label={`Open ${photo.alt}`}
                 >
