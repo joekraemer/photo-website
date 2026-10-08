@@ -30,6 +30,13 @@ export function buildRows(photos) {
     return rows;
 }
 
+// How many photos a full row of this kind holds: three verticals or two
+// horizontals. A short last row still sizes its photos by this, so a lone
+// leftover photo stays the size of the ones above it.
+export function rowSlots(row) {
+    return row.length && (row[0].aspect || 1) < 1 ? 3 : 2;
+}
+
 // A horizontal finger movement at least this long counts as a swipe.
 export const SWIPE_MIN_PX = 50;
 
