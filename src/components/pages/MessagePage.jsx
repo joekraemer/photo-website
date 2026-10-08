@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import './PhotosPage.css';
 import useDocumentTitle from '../../hooks/useDocumentTitle';
 
