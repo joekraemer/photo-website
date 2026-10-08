@@ -88,6 +88,10 @@ title: Seoul in the Rain
 cover: DSC09123.jpg
 hidden: false
 order: 1
+sort: date
+photos:
+  - DSC09140.jpg
+  - DSC09123.jpg
 ---
 A short intro shown at the top of the album.
 ```
@@ -95,8 +99,21 @@ A short intro shown at the top of the album.
 All fields are optional. Without `title`, the name comes from the folder.
 Without `cover`, the cover is your highest-rated vertical photo, or the
 highest-rated photo if the shoot has no verticals. `order` pins albums to the
-front of the list (lowest first); the rest are newest first. A typo in a field
-is reported as a warning and that field is ignored.
+front of the list (lowest first); the rest are newest first.
+
+Photo order inside the album:
+- `sort` is `date` (oldest first, the default), `date-desc` (newest first) or
+  `name` (by file name). Photos with no capture date go last.
+- `photos` lists file names to show first, in that order. Every other photo
+  follows by `sort`. A listed name with no file in `_web/` is skipped with a
+  warning.
+
+The site lays photos out in rows of three verticals or two horizontals, so a
+vertical and a horizontal next to each other in the list can land in
+different rows. The lightbox steps through photos in the order they appear on
+screen.
+
+A typo in a field is reported as a warning and that field is ignored.
 
 ## Why not a Publish Service
 
