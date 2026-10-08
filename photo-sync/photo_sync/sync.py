@@ -132,6 +132,34 @@ def _capture_order(photo: dict):
             archive.name_key(photo["_name"]))
 
 
+def display_order(photos: list[dict], sort: str, listed: list[str],
+                  warn=None) -> list[dict]:
+    """Order an album's photos for the site. `photos` must be in capture
+    order and carry `_name`. Photos named in album.md `photos:` come first, in
+    that order; the rest follow by `sort` (date = oldest first, date-desc =
+    newest first, name = file name). Undated photos go last in both date
+    modes. A listed name with no matching file is passed to `warn`."""
+    if sort == "name":
+        rest = sorted(photos, key=lambda p: archive.name_key(p["_name"]))
+    elif sort == "date-desc":
+        dated = [p for p in photos if p["exif"].get("taken_at")]
+        undated = [p for p in photos if not p["exif"].get("taken_at")]
+        rest = dated[::-1] + undated
+    else:
+        rest = list(photos)
+    by_name = {archive.name_key(p["_name"]): p for p in photos}
+    first = []
+    for name in listed:
+        photo = by_name.get(archive.name_key(name))
+        if photo is None:
+            if warn:
+                warn(name)
+            continue
+        first.append(photo)
+    picked = {id(p) for p in first}
+    return first + [p for p in rest if id(p) not in picked]
+
+
 def pick_cover(photos: list[dict]) -> str:
     """Cover when album.md names none: the highest-rated portrait photo (the
     site's album cards are 2:3), else the highest-rated landscape one, which
@@ -369,9 +397,6 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
             result.warnings.append(f"{shoot.rel}: cover '{shoot.meta.cover}' not found in _web/; "
                                    "picking one automatically")
         cover_id = cover_id or pick_cover(photos)
-        for p in photos:
-            p.pop("_name")
-            p.pop("_rating")
 
         if shoot.folder_date is not None:
             album_date = shoot.folder_date.isoformat()
@@ -382,6 +407,15 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
             album_date = dated[0]["exif"]["taken_at"][:10] if dated else None
             if album_date is None:
                 result.warnings.append(f"{shoot.rel}: no folder date and no EXIF date; album date unknown")
+
+        photos = display_order(
+            photos, shoot.meta.sort, shoot.meta.photos,
+            warn=lambda name: result.warnings.append(
+                f"{shoot.rel}: album.md 'photos' lists '{name}', not found in _web/; ignored"),
+        )
+        for p in photos:
+            p.pop("_name")
+            p.pop("_rating")
 
         album = {
             "slug": slug,

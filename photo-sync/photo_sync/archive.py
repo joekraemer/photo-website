@@ -16,7 +16,8 @@ SHOOT_RE = re.compile(r"^(\d{2})-(\d{2})-(\d{4}) (\S(?:.*\S)?)$")
 DATE_PREFIX_RE = re.compile(r"^\d{2}-\d{2}-\d{4}")
 YEAR_RE = re.compile(r"^\d{4}$")
 WEB_DIR = "_web"
-ALBUM_KEYS = frozenset({"title", "cover", "hidden", "order"})
+ALBUM_KEYS = frozenset({"title", "cover", "hidden", "order", "sort", "photos"})
+SORT_MODES = ("date", "date-desc", "name")
 
 
 def name_key(name: str) -> str:
@@ -37,6 +38,9 @@ class AlbumMeta:
     cover: str | None = None
     hidden: bool = False
     order: int | None = None
+    sort: str = "date"
+    # File names to show first, in this order; the rest follow by `sort`.
+    photos: list[str] = field(default_factory=list)
     intro: str = ""
 
 
@@ -140,6 +144,34 @@ def parse_album_md(path: Path, problems: list[str] | None = None) -> AlbumMeta:
         problems.append(f"album.md 'order' must be a whole number, got {order!r}; ignored")
         order = None
 
+    sort = front.get("sort")
+    if sort is None or sort == "":
+        sort = "date"
+    elif not isinstance(sort, str) or sort.strip().lower() not in SORT_MODES:
+        problems.append(f"album.md 'sort' must be one of {', '.join(SORT_MODES)}, "
+                        f"got {sort!r}; using date")
+        sort = "date"
+    else:
+        sort = sort.strip().lower()
+
+    listed = front.get("photos")
+    photos: list[str] = []
+    if listed is not None and listed != "":
+        if not isinstance(listed, list):
+            problems.append("album.md 'photos' must be a list of file names; ignored")
+        else:
+            seen: set[str] = set()
+            for item in listed:
+                if item is None or isinstance(item, (dict, list, bool)) or not str(item).strip():
+                    problems.append(f"album.md 'photos' entry {item!r} is not a file name; ignored")
+                    continue
+                name = str(item).strip()
+                if name_key(name) in seen:
+                    problems.append(f"album.md 'photos' lists {name!r} twice; using the first")
+                    continue
+                seen.add(name_key(name))
+                photos.append(name)
+
     hidden = front.get("hidden", False)
     if hidden is None:
         hidden = False
@@ -152,6 +184,8 @@ def parse_album_md(path: Path, problems: list[str] | None = None) -> AlbumMeta:
         cover=text_field("cover"),
         hidden=hidden,
         order=order,
+        sort=sort,
+        photos=photos,
         intro=body.strip(),
     )
 
