@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import '../../App.css';
 import './PhotosPage.css';
 import PhotoGrid from '../PhotoGrid';

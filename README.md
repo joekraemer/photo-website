@@ -9,7 +9,7 @@ manifest, stored on Backblaze B2. The site reads
 
 ## Tech stack
 
-- React 18 + React Router 6 (client-side routing)
+- React 18 + React Router 7 (client-side routing)
 - `photo-sync` (Python) + Backblaze B2 for photo hosting
 - [Vite](https://vite.dev/) build tooling, [Vitest](https://vitest.dev/) for tests (Node 22)
 

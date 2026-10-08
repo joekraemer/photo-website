@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation, useNavigationType } from 'react-router-dom';
+import { useLocation, useNavigationType } from 'react-router';
 import { pageKey } from '../services/lightboxNav';
 
 // Start each new page at the top instead of keeping the previous scroll position.

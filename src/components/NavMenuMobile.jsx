@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 function NavMenuMobile({ menuItems, click, closeMobileMenu }) {
     // The closed menu stays in the DOM (it slides in), so keep its links out of
