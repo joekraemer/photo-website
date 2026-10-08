@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { exifLine } from '../services/photoService';
+import { exifLine, placeholderProps } from '../services/photoService';
 import { swipeDirection } from '../services/lightboxNav';
 import './Modal.css';
 
@@ -67,6 +67,10 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
     };
 
     const exif = exifLine(photo.exif);
+    const placeholder = placeholderProps(photo);
+    const boxStyle = photo.width && photo.height
+        ? { '--aspect': photo.width / photo.height, '--natural-w': `${photo.width}px` }
+        : {};
 
     return (
         <div
@@ -87,6 +91,8 @@ function Modal({ photo, prevPhoto, nextPhoto, onPrev, onNext, onClose }) {
                     alt={photo.alt}
                     width={photo.width}
                     height={photo.height}
+                    {...placeholder}
+                    style={{ ...placeholder.style, ...boxStyle }}
                 />
                 <button type="button" className="modal-button" onClick={onClose} aria-label="Close" ref={closeRef}>
                     <i className="fas fa-times" aria-hidden="true" />

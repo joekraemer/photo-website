@@ -1,4 +1,4 @@
-import { exifLine, normalizeManifest } from './photoService';
+import { exifLine, normalizeManifest, placeholderProps } from './photoService';
 
 const goodPhoto = (id) => ({
     id,
@@ -54,5 +54,21 @@ describe('exifLine', () => {
 
     it('falls back to the raw camera model', () => {
         expect(exifLine({ camera: 'ILCE-6400', aperture: 'f/4' })).toBe('ILCE-6400 · f/4');
+    });
+});
+
+describe('placeholderProps', () => {
+    it('paints a valid colour and clears it on load', () => {
+        const props = placeholderProps({ color: '#3a5f7d' });
+        expect(props.style).toEqual({ backgroundColor: '#3a5f7d' });
+        const img = { style: { backgroundColor: '#3a5f7d' } };
+        props.onLoad({ currentTarget: img });
+        expect(img.style.backgroundColor).toBe('');
+    });
+
+    it('ignores a missing or malformed colour', () => {
+        expect(placeholderProps({})).toEqual({});
+        expect(placeholderProps({ color: 'red; background:url(x)' })).toEqual({});
+        expect(placeholderProps(null)).toEqual({});
     });
 });

@@ -21,13 +21,20 @@
     box-shadow: 0 0 0px rgba(0, 0, 0, 0.2);
 }
 
+/* The photo's box is sized from its known dimensions (--aspect, --natural-w
+   set inline) so the frame has its final size before the image arrives: no
+   collapse while loading, and room for the placeholder colour. The result is
+   the natural size scaled down to fit --max-w x --max-h, never up. */
 .modal-img {
+    --max-w: 80vw;
+    --max-h: 70vh;
     display: block;
     line-height: 0;
-    max-width: 80vw;
-    max-height: 70vh;
     padding: 0;
     margin: 0;
+    width: min(var(--max-w), calc(var(--max-h) * var(--aspect, 1)), var(--natural-w, 100vw));
+    height: auto;
+    aspect-ratio: var(--aspect, auto);
 }
 
 /* Small close button inside the white frame's top-right corner, clear of the photo. */
@@ -73,11 +80,6 @@
     margin: 0;
 }
 
-.modal-img {
-    width: auto;
-    height: auto;
-}
-
 /* Previous/next arrows: white chevrons on the dark backdrop beside the white
    frame, vertically centred on it. */
 .modal-arrow {
@@ -117,7 +119,7 @@
    and wider 80vw is already the smaller limit. */
 @media (hover: hover) and (pointer: fine) and (min-width: 731px) {
     .modal-img {
-        max-width: min(80vw, calc(100vw - 256px));
+        --max-w: min(80vw, calc(100vw - 256px));
     }
 }
 
@@ -129,8 +131,8 @@
     }
 
     .modal-img {
-        max-width: calc(100vw - 2.5em);
-        max-height: 80vh;
+        --max-w: calc(100vw - 2.5em);
+        --max-h: 80vh;
     }
 
     /* Wrap the caption to the photo's width instead of letting a long EXIF

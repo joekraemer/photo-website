@@ -222,6 +222,21 @@ def open_image(source) -> Image.Image:
     return img
 
 
+def average_color(source) -> str | None:
+    """The photo's average sRGB colour as '#rrggbb', for the site's loading
+    placeholder. A JPEG is decoded at 1/8 scale, so this is cheap even when the
+    sync reuses existing renders. Returns None if the image can't be read."""
+    try:
+        img = open_image(source)
+        if img.format == "JPEG":
+            img.draft("RGB", (64, 64))
+        rgb = _to_srgb(img)
+        r, g, b = rgb.resize((1, 1), Image.Resampling.BOX).getpixel((0, 0))[:3]
+    except Exception:  # noqa: BLE001 - a missing colour must never fail a sync
+        return None
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
 def fit_size(width: int, height: int, long_edge: int) -> tuple[int, int]:
     """Mirror PIL.Image.thumbnail's size math so skipped photos report exact dimensions."""
     if width <= long_edge and height <= long_edge:
