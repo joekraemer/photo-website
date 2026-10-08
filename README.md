@@ -24,7 +24,7 @@ sizes (the large one watermarked), reads the camera settings and uploads
 everything with a new `photos.json`. An optional `album.md` in the shoot folder
 sets the title, cover, intro or `hidden: true`. The full design is in
 [issue #21](https://github.com/joekraemer/photo-website/issues/21), and the
-Lightroom setup is in [issue #22](https://github.com/joekraemer/photo-website/issues/22).
+Lightroom setup is in [docs/lightroom.md](docs/lightroom.md).
 
 What `photo-sync` does with each shoot:
 
