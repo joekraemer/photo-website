@@ -1,12 +1,12 @@
 // Loads photos.json (written by photo-sync) and turns its relative keys into URLs.
 //
-// REACT_APP_PHOTOS_BASE_URL is where photos.json lives (the public B2 bucket's
+// VITE_PHOTOS_BASE_URL is where photos.json lives (the public B2 bucket's
 // S3-style URL). When unset, the app falls back to the local dev output in
 // public/local-photos/.
 
-const DEFAULT_BASE = `${process.env.PUBLIC_URL || ''}/local-photos`;
+const DEFAULT_BASE = `${import.meta.env.BASE_URL}local-photos`;
 
-export const PHOTOS_BASE_URL = (process.env.REACT_APP_PHOTOS_BASE_URL || DEFAULT_BASE).replace(/\/+$/, '');
+export const PHOTOS_BASE_URL = (import.meta.env.VITE_PHOTOS_BASE_URL || DEFAULT_BASE).replace(/\/+$/, '');
 
 let manifestPromise = null;
 

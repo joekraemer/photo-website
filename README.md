@@ -7,13 +7,11 @@ manifest, stored on Backblaze B2. The site reads
 
 **Live site:** https://joekraemer.github.io/photo-website/
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
-
 ## Tech stack
 
 - React 18 + React Router 6 (client-side routing)
 - `photo-sync` (Python) + Backblaze B2 for photo hosting
-- Create React App build tooling
+- [Vite](https://vite.dev/) build tooling, [Vitest](https://vitest.dev/) for tests (Node 22)
 
 ## Adding photos
 
@@ -54,7 +52,7 @@ What `photo-sync` does with each shoot:
 
 ## Photos
 
-The build reads `REACT_APP_PHOTOS_BASE_URL`: the URL of the folder holding
+The build reads `VITE_PHOTOS_BASE_URL`: the URL of the folder holding
 `photos.json`. When unset, the app loads `public/local-photos/` (gitignored),
 which is where `photo-sync` writes with `TARGET=local`.
 
@@ -129,16 +127,17 @@ Dependencies for the image are pinned in `photo-sync/uv.lock`; `uv sync` in
 
 ### `npm start`
 
-Runs the app in development mode at [http://localhost:3000](http://localhost:3000).
-The page reloads on changes and lint errors show in the console.
+Runs the Vite dev server at [http://localhost:5173/photo-website/](http://localhost:5173/photo-website/).
+The page updates as you edit.
 
 ### `npm run build`
 
-Builds the app for production into the `build/` folder.
+Builds the app for production into the `build/` folder. `npm run preview` serves
+that build locally.
 
 ### `npm test`
 
-Runs the test watcher.
+Runs the unit tests once with Vitest.
 
 ## Deployment
 
@@ -148,9 +147,9 @@ The site deploys automatically to **GitHub Pages** via GitHub Actions
 Because this is a React Router single-page app served from a project subpath
 (`/photo-website/`), two pieces make deep links work:
 
-- `homepage` in `package.json` and `basename={process.env.PUBLIC_URL}` on the
-  `<Router>` set the correct base path.
-- `public/404.html` + the decode script in `public/index.html` implement the
+- `base` in `vite.config.js` and `basename` (from `import.meta.env.BASE_URL`) on
+  the `<Router>` set the correct base path.
+- `public/404.html` + the decode script in `index.html` implement the
   [spa-github-pages](https://github.com/rafgraph/spa-github-pages) redirect so a
   refresh on `/photo-website/photos` resolves instead of 404ing.
 

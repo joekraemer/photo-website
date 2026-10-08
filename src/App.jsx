@@ -14,7 +14,7 @@ import ScrollToTop from './components/ScrollToTop';
 function App() {
   return (
     <div className="main__container">
-      <Router basename={process.env.PUBLIC_URL}>
+      <Router basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
         <ScrollToTop />
         <Navbar />
         <div className="content__container">

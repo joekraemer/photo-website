@@ -6,7 +6,7 @@ function HeroSection() {
         <div className='hero__section__container'>
             <figure className="hero__section__figure">
                 <img
-                    src={`${process.env.PUBLIC_URL}/photos/herophoto.webp`}
+                    src={`${import.meta.env.BASE_URL}photos/herophoto.webp`}
                     alt="Joe Kraemer standing on a sand dune"
                     className="hero__section__img"
                     width="936"

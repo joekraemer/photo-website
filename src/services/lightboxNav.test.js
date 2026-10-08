@@ -1,4 +1,4 @@
-import { buildRows, stepIndex, swipeDirection, SWIPE_MIN_PX } from './lightboxNav';
+import { buildRows, pageKey, stepIndex, swipeDirection, SWIPE_MIN_PX } from './lightboxNav';
 
 const v = (id) => ({ id, aspect: 0.66 });
 const h = (id) => ({ id, aspect: 1.5 });
@@ -48,7 +48,6 @@ describe('swipeDirection', () => {
 });
 
 describe('pageKey', () => {
-    const { pageKey } = require('./lightboxNav');
     it('treats a photo URL as its album page', () => {
         expect(pageKey('/photos/south-korea/dsc09123-ab12cd34')).toBe('/photos/south-korea');
         expect(pageKey('/photos/south-korea/dsc09123-ab12cd34/')).toBe('/photos/south-korea');

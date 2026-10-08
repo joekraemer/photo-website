@@ -11,7 +11,7 @@ const goodPhoto = (id) => ({
 
 describe('normalizeManifest', () => {
     let warn;
-    beforeEach(() => { warn = jest.spyOn(console, 'warn').mockImplementation(() => {}); });
+    beforeEach(() => { warn = vi.spyOn(console, 'warn').mockImplementation(() => {}); });
     afterEach(() => warn.mockRestore());
 
     it('resolves photo keys against base_url', () => {
