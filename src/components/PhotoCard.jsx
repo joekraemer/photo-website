@@ -18,6 +18,7 @@ function PhotoCard({ album }) {
     const cover = album.coverPhoto;
     const navigate = useNavigate();
     const to = `/photos/${album.slug}`;
+    const label = album.date ? `${album.title}, ${formatAlbumDate(album.date)}` : album.title;
 
     // Links open on Enter already; let Space open the album too, like a button.
     const onKeyDown = (event) => {
@@ -29,14 +30,14 @@ function PhotoCard({ album }) {
 
     return (
         <div className="photo__card">
-            <Link to={to} onKeyDown={onKeyDown}>
+            <Link to={to} onKeyDown={onKeyDown} aria-label={label}>
                 <figure className="photo__card">
                     {cover && (
                         <img
                             src={cover.urls.thumb}
                             srcSet={`${cover.urls.thumb} 500w, ${cover.urls.medium} 1600w`}
                             sizes={coverSizes(cover)}
-                            alt={cover.alt}
+                            alt=""
                             width={cover.width}
                             height={cover.height}
                             loading="lazy"
