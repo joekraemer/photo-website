@@ -67,12 +67,18 @@
     color: #000;
 }
 
-/* Caption sits in the white frame under the photo, not over it. */
+/* Caption sits on the dark backdrop just under the white frame, so the frame
+   keeps an even border on all four sides. Absolutely positioned so it adds no
+   height to the frame and the frame stays centred on screen. */
 .exif__data {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
     line-height: 1.4;
-    margin: 0.75em 0 -1em;
+    margin-top: 0.75em;
     font-size: 0.8rem;
-    color: #555;
+    color: rgba(255, 255, 255, 0.75);
     text-align: center;
 }
 
@@ -123,23 +129,34 @@
     }
 }
 
-/* Phones: a thinner white frame so the photo gets most of the screen. The top
-   keeps room for the close button; the caption stays inside the frame. */
+/* Phones: a thin, even white frame so the photo gets most of the screen. The
+   close button moves onto the backdrop just above the frame's top-right
+   corner, and the caption wraps to the frame's width below it. */
 @media (max-width: 730px) {
     .modal-content {
-        padding: 2em 0.5em 0.75em;
+        padding: 0.5em;
     }
 
     .modal-img {
-        --max-w: calc(100vw - 2.5em);
-        --max-h: 80vh;
+        --max-w: calc(100vw - 1em);
+        --max-h: 72vh;
     }
 
-    /* Wrap the caption to the photo's width instead of letting a long EXIF
-       line stretch the frame to the screen edges. */
+    .modal-button {
+        top: auto;
+        bottom: 100%;
+        width: 2.75em;
+        height: 2.75em;
+    }
+
+    .modal-button .fa-times,
+    .modal-button:hover .fa-times,
+    .modal-button:focus-visible .fa-times {
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 1.25rem;
+    }
+
     .exif__data {
-        margin: 0.5em 0 0;
-        width: 0;
-        min-width: 100%;
+        margin-top: 0.5em;
     }
 }
