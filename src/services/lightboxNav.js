@@ -37,6 +37,22 @@ export function rowSlots(row) {
     return row.length && (row[0].aspect || 1) < 1 ? 3 : 2;
 }
 
+// Every grid tile in a row has the same shape, so rows line up even when a
+// photo was cropped slightly differently. Most of the archive is 4:5 / 5:4;
+// anything else is cropped to fit (centred). The lightbox shows the full photo.
+export const TILE_ASPECT = { vertical: 4 / 5, horizontal: 5 / 4 };
+
+export function tileAspect(row) {
+    return row.length && (row[0].aspect || 1) < 1 ? TILE_ASPECT.vertical : TILE_ASPECT.horizontal;
+}
+
+// How much wider than its tile a cropped photo is drawn (1 = no side crop),
+// so srcset can pick a file that stays sharp.
+export function cropScale(photo, tile) {
+    const aspect = photo.aspect || (photo.width && photo.height ? photo.width / photo.height : tile);
+    return Math.max(1, aspect / tile);
+}
+
 // A horizontal finger movement at least this long counts as a swipe.
 export const SWIPE_MIN_PX = 50;
 

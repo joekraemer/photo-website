@@ -1,4 +1,4 @@
-import { buildRows, pageKey, rowSlots, stepIndex, swipeDirection, SWIPE_MIN_PX } from './lightboxNav';
+import { buildRows, cropScale, pageKey, rowSlots, stepIndex, swipeDirection, SWIPE_MIN_PX, tileAspect } from './lightboxNav';
 
 const v = (id) => ({ id, aspect: 0.66 });
 const h = (id) => ({ id, aspect: 1.5 });
@@ -20,6 +20,22 @@ describe('buildRows', () => {
 
     test('missing aspect counts as horizontal', () => {
         expect(buildRows([{ id: 'x' }])).toEqual([[{ id: 'x' }]]);
+    });
+});
+
+describe('tileAspect and cropScale', () => {
+    test('vertical rows get 4:5 tiles, horizontal rows 5:4', () => {
+        expect(tileAspect([v('v1')])).toBeCloseTo(0.8);
+        expect(tileAspect([h('h1')])).toBeCloseTo(1.25);
+    });
+
+    test('a photo wider than its tile is drawn wider; narrower or equal is not', () => {
+        expect(cropScale({ aspect: 1.6 }, 1.25)).toBeCloseTo(1.28);
+        expect(cropScale({ aspect: 0.833 }, 0.8)).toBeCloseTo(1.041, 2);
+        expect(cropScale({ aspect: 0.8 }, 0.8)).toBe(1);
+        expect(cropScale({ aspect: 0.66 }, 0.8)).toBe(1);
+        expect(cropScale({ width: 2560, height: 1600 }, 1.25)).toBeCloseTo(1.28);
+        expect(cropScale({}, 0.8)).toBe(1);
     });
 });
 
