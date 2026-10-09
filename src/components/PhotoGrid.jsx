@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Photo from './Photo';
 import Modal from './Modal';
-import { buildRows, rowSlots, stepIndex } from '../services/lightboxNav';
+import { buildRows, rowSlots, stepIndex, tileAspect } from '../services/lightboxNav';
 import './PhotoGrid.css';
 
 // The grid owns the lightbox so it can move between photos in the order they
@@ -50,8 +50,9 @@ function PhotoGrid({ photos, variant = 'thumb', openId, onOpenChange }) {
         <div className="photo-grid">
             {rows.map((row, index) => {
                 const slots = rowSlots(row);
+                const tile = tileAspect(row);
                 return (
-                <div className="photo-row" key={index} style={{ '--slots': slots }}>
+                <div className="photo-row" key={index} style={{ '--slots': slots, '--tile-aspect': tile }}>
                     {row.map((photo) => {
                         const i = position++;
                         return (
@@ -60,6 +61,7 @@ function PhotoGrid({ photos, variant = 'thumb', openId, onOpenChange }) {
                                 photo={photo}
                                 variant={variant}
                                 perRow={slots}
+                                tile={tile}
                                 onOpen={() => open(i)}
                                 buttonRef={(el) => { buttons.current[i] = el; }}
                             />

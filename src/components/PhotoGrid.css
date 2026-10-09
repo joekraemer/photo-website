@@ -19,9 +19,12 @@
 .photo__img {
     height: 100%;
     width: 100%;
-    /* A lone vertical photo in a row would otherwise grow to the full width. */
-    max-height: 85vh;
-    object-fit: contain;
+    /* Every tile in a row has the same shape (4:5 verticals, 5:4 horizontals,
+       set per row by PhotoGrid). A photo cropped to another ratio fills its
+       tile, centred; the lightbox still shows the whole photo. */
+    aspect-ratio: var(--tile-aspect, auto);
+    object-fit: cover;
+    object-position: center;
 }
 
 /* Media query for smaller screens */
