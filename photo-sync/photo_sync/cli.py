@@ -10,7 +10,7 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
-from . import sync
+from . import cache, sync
 from .config import Config, ConfigError, load_env_file
 from .targets import make_target
 
@@ -89,7 +89,8 @@ def main(argv: list[str] | None = None) -> int:
                 with run_lock(lock):
                     target = make_target(cfg)
                     print(f"Syncing {cfg.source_root} -> {target.describe()}")
-                    result = sync.run(cfg, target, prune=args.prune)
+                    result = sync.run(cfg, target, prune=args.prune,
+                                      cache_path=cache.default_path())
             except AlreadyRunning as exc:
                 who = f" (pid {exc})" if str(exc) else ""
                 print(f"Another photo-sync run is already in progress{who}, holding {lock}. "

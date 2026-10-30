@@ -13,6 +13,7 @@ from typing import Callable
 from PIL import Image, UnidentifiedImageError
 
 from . import archive, imaging
+from .cache import ExportCache
 from .targets import MANIFEST_CACHE, PHOTO_CACHE
 
 MANIFEST_KEY = "photos.json"
@@ -242,7 +243,9 @@ def _base_slug(shoot: archive.Shoot) -> str:
 
 
 def run(cfg, target=None, *, check: bool = False, prune: bool = False,
-        log: Callable[[str], None] = print) -> Result:
+        log: Callable[[str], None] = print, cache_path=None) -> Result:
+    """`cache_path`: where to keep the export cache (see cache.py); None runs
+    without one, reading every export in full."""
     result = Result()
     if not check and (reason := sentinel_missing(cfg)):
         result.skipped = reason
@@ -294,6 +297,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
     used_slugs: set[str] = set()
     hidden_prefixes: list[str] = []
     fingerprint = render_fingerprint(cfg)
+    cache = ExportCache.load(cache_path, fingerprint, log)
 
     for shoot in shoots:
         if shoot.meta.hidden:
@@ -327,9 +331,50 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
                 result.warnings.append(f"{where}: {msg}")
                 result.fresh.append(where)
                 continue
+            # Stat BEFORE reading: if the file changes in between, the cached
+            # size/mtime are the old ones and the next run re-reads it.
+            cache_rel = where
+            try:
+                st = src.stat()
+            except OSError:
+                st = None  # the read below reports it
+            photo_slug = archive.slugify(src.stem)
+            hit = cache.lookup(cache_rel, st.st_size, st.st_mtime_ns) if st else None
+            if hit is not None and not all(
+                    k in existing for k in photo_keys(slug, photo_slug, hit["digest"]).values()):
+                hit = None  # renders missing on the target: do the full path
+            if hit is not None:
+                digest = hit["digest"]
+                keys = photo_keys(slug, photo_slug, digest)
+                photo_id = f"{photo_slug}-{digest[:8]}"
+                if photo_id in seen_ids:
+                    result.warnings.append(f"{where}: duplicate of another export; skipped")
+                    continue
+                seen_ids.add(photo_id)
+                expected.update(keys.values())
+                result.skipped_photos += 1
+                cache.hits += 1
+                cache.keep(cache_rel, hit)
+                if cover_key and archive.name_key(src.name) == cover_key:
+                    cover_id = photo_id
+                width, height = hit["width"], hit["height"]
+                photos.append({
+                    "id": photo_id,
+                    "alt": hit["description"] or f"{title} — {src.stem}",
+                    "width": width,
+                    "height": height,
+                    "aspect": round(width / height, 4) if height else None,
+                    "sizes": dict(keys),
+                    **hit["placeholder"],
+                    "exif": hit["exif"],
+                    "_name": src.name,
+                    "_rating": hit["rating"] or 0,
+                })
+                continue
+
+            cache.misses += 1
             raw = src.read_bytes()
             digest = content_digest(raw, fingerprint)
-            photo_slug = archive.slugify(src.stem)
             keys = photo_keys(slug, photo_slug, digest)
             photo_id = f"{photo_slug}-{digest[:8]}"
             if photo_id in seen_ids:
@@ -381,6 +426,7 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
             if cover_key and archive.name_key(src.name) == cover_key:
                 cover_id = photo_id
             placeholder = imaging.placeholders(io.BytesIO(raw))
+            rating = imaging.read_rating(raw)
             photos.append({
                 "id": photo_id,
                 "alt": description or f"{title} — {src.stem}",
@@ -391,8 +437,15 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
                 **placeholder,
                 "exif": exif,
                 "_name": src.name,
-                "_rating": imaging.read_rating(raw) or 0,
+                "_rating": rating or 0,
             })
+            if st is not None:
+                # Through JSON so a later cache hit yields exactly what a
+                # fresh read publishes (photos.json is JSON too).
+                cache.keep(cache_rel, json.loads(json.dumps(cache.entry(
+                    size=st.st_size, mtime_ns=st.st_mtime_ns, digest=digest, exif=exif,
+                    description=description, rating=rating, width=width, height=height,
+                    placeholder=placeholder))))
 
         photos.sort(key=_capture_order)
         if not photos:
@@ -434,6 +487,11 @@ def run(cfg, target=None, *, check: bool = False, prune: bool = False,
             album["order"] = shoot.meta.order
         albums.append(album)
         result.photos += len(photos)
+
+    # Only exports seen this run are kept, so the cache never outgrows the archive.
+    cache.save(log)
+    if cache_path is not None:
+        log(f"Cache: {cache.hits} exports unchanged (not read), {cache.misses} read")
 
     # Newest first; undated albums last. An explicit album.md `order` pins albums
     # to the top, lowest number first.
