@@ -75,6 +75,12 @@ The bucket behind `PHOTOS_BASE_URL` needs a CORS rule that allows `GET` from
 `https://joekraemer.github.io`, or the site cannot fetch `photos.json`. Setup
 steps are in [issue #20](https://github.com/joekraemer/photo-website/issues/20).
 
+The build also writes a Content-Security-Policy `<meta>` tag into
+`index.html` (`csp.js`; GitHub Pages cannot send headers). It allows the
+bucket origin from `VITE_PHOTOS_BASE_URL`, the Font Awesome kit, Google Fonts
+and the inline SPA redirect script (by hash). Loading anything from a new
+origin means adding it in `csp.js`, or the browser blocks it.
+
 ### Scheduled sync on the fleet host
 
 `photo-sync` also ships as a container image, `ghcr.io/joekraemer/photo-sync:main`,
