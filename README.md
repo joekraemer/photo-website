@@ -120,10 +120,19 @@ Safety for unattended runs, because the drive is often unplugged:
   (`$TMPDIR/photo-sync.lock`, or `PHOTO_LOCK_FILE`). A second run while one is
   going prints that it is already in progress and exits 0 without changes.
   `--check` doesn't take the lock.
+- **Skip unchanged exports.** A run keeps a small cache
+  (`PHOTO_CACHE_FILE`, default `~/.cache/photo-sync/photo-sync-cache.json`)
+  of what it learned from each `_web/` file. The next run does not read a file
+  whose path, size and modification time match its entry, rendered with the
+  same settings, while its renders are still on the target. Anything else (a
+  changed file, missing renders, new watermark settings, a missing or damaged
+  cache) is the normal full read, so deleting the cache only costs one slow
+  run. In the fleet container `~` is `/home/app`, the `photo-sync-home`
+  volume, so the cache survives image updates.
 
 Settings: `PHOTO_SOURCE_ROOT`; `PHOTO_REQUIRE_SENTINEL` (on in the fleet
 entry point, off for the plain CLI); `PHOTO_ALLOW_SHRINK`;
-`PHOTO_SETTLE_SECONDS` (default 60); `PHOTO_LOCK_FILE`;
+`PHOTO_SETTLE_SECONDS` (default 60); `PHOTO_LOCK_FILE`; `PHOTO_CACHE_FILE`;
 `PHOTO_REQUIRE_MOUNT` / `PHOTO_MOUNT_POINT` for a mount-point check, which
 the fleet turns off: under Colima the USB drive is not a separate mount inside
 the container, so the check cannot tell plugged from unplugged.
