@@ -35,6 +35,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Run the tests before building so a red test keeps the current site
+      # live instead of publishing a broken one, even when a commit reaches
+      # main without passing ci.yml (no PR, or merged before CI finished).
+      - name: Test
+        run: npm test
+
       - name: Check photo hosting variable
         env:
           PHOTOS_BASE_URL: ${{ vars.PHOTOS_BASE_URL }}
